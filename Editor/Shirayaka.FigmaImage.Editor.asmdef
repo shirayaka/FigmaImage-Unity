@@ -1,0 +1,20 @@
+{
+  "name": "Shirayaka.FigmaImage.Editor",
+  "rootNamespace": "ProjectArea.UI.Editor",
+  "references": [
+    "Shirayaka.FigmaImage",
+    "UnityEngine.UI",
+    "UnityEditor.UI"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

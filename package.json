@@ -1,0 +1,37 @@
+{
+  "name": "com.shirayaka.figma-image",
+  "version": "1.0.0",
+  "displayName": "Figma Image",
+  "description": "A Unity UI Image component with Figma-style corner radii, inside strokes, drop shadows, masking, and rounded raycasts.",
+  "unity": "6000.0",
+  "documentationUrl": "https://github.com/shirayaka/FigmaImage-Unity/blob/main/Documentation~/index.md",
+  "changelogUrl": "https://github.com/shirayaka/FigmaImage-Unity/blob/main/CHANGELOG.md",
+  "licensesUrl": "https://github.com/shirayaka/FigmaImage-Unity/blob/main/LICENSE",
+  "dependencies": {
+    "com.unity.ugui": "2.0.0",
+    "com.unity.inputsystem": "1.14.0"
+  },
+  "keywords": [
+    "ui",
+    "figma",
+    "image",
+    "rounded-corners",
+    "stroke",
+    "drop-shadow"
+  ],
+  "author": {
+    "name": "Shirayaka",
+    "url": "https://github.com/shirayaka"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/shirayaka/FigmaImage-Unity.git"
+  },
+  "samples": [
+    {
+      "displayName": "Basic Usage",
+      "description": "A scene demonstrating corner radii, strokes, shadows, masks, and sprites.",
+      "path": "Samples~/Basic Usage"
+    }
+  ]
+}

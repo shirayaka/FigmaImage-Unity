@@ -1,0 +1,16 @@
+{
+  "name": "Shirayaka.FigmaImage",
+  "rootNamespace": "ProjectArea.UI",
+  "references": [
+    "UnityEngine.UI"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
