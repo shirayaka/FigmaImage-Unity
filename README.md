@@ -1,13 +1,12 @@
 # Figma Image for Unity
 
-`FigmaImage` extends Unity's uGUI `Image` with Figma-style visual controls:
+`FigmaImage` it's just Unity's uGUI `Image` with Figma-style visual controls :)
 
 - Uniform or per-corner radius
 - Inside stroke with configurable width and color
 - Drop shadow with offset, blur, spread, and color
 - Rounded raycast filtering
 - `Mask` and `RectMask2D` compatibility
-- Legacy `RoundedImage` migration support
 
 ## Requirements
 
