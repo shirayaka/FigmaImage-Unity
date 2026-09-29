@@ -11,9 +11,9 @@ namespace ProjectArea.UI.Tests
         {
             var sb = new StringBuilder();
             int passed = 0;
-            int total = 32;
+            int total = 58;
 
-            sb.AppendLine("=== Running FigmaImage Acceptance Tests (Corner Radius, Stroke & Drop Shadow) ===");
+            sb.AppendLine("=== Running FigmaImage Acceptance Tests (Corner Radius, Stroke, Drop Shadow & Inner Shadow) ===");
 
             GameObject testRoot = new GameObject("TestRoot_Canvas", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler));
             Canvas canvas = testRoot.GetComponent<Canvas>();
@@ -1081,6 +1081,939 @@ namespace ProjectArea.UI.Tests
                         sb.AppendLine($"[FAIL] Test 32: tangent.z:{v0.tangent.z}, created:{overlayCreated}, correct:{overlayCorrect}, removed:{overlayRemoved}");
                     }
                 }
+
+                // Test 33: Outside Stroke Configuration & Tangent Stream
+                {
+                    var go = CreateImageObject("Test33_OutsideStrokeConfig", testRoot);
+                    var img = go.GetComponent<FigmaImage>();
+                    img.SetRadius(16f);
+                    img.SetStrokeEnabled(true);
+                    img.SetStrokeWidth(6f);
+                    img.SetStrokeColor(Color.cyan);
+                    img.SetStrokePosition(FigmaStrokePosition.Outside);
+
+                    VertexHelper vh = new VertexHelper();
+                    img.SendMessage("OnPopulateMesh", vh, SendMessageOptions.DontRequireReceiver);
+
+                    UIVertex vert = new UIVertex();
+                    bool validTangent = false;
+                    if (vh.currentVertCount > 0)
+                    {
+                        vh.PopulateUIVertex(ref vert, 0);
+                        validTangent = Mathf.Approximately(vert.tangent.x, 6f) && Mathf.Approximately(vert.tangent.z, 3f);
+                    }
+
+                    if (img.StrokeEnabled && img.StrokePosition == FigmaStrokePosition.Outside &&
+                        Mathf.Approximately(img.StrokeWidth, 6f) && img.StrokeColor == Color.cyan && validTangent)
+                    {
+                        sb.AppendLine("[PASS] Test 33: Outside Stroke Configuration -> Position=Outside, Width=6, Tangent.z=3 streamed to shader");
+                        passed++;
+                    }
+                    else
+                    {
+                        sb.AppendLine($"[FAIL] Test 33: Outside stroke configuration failed: pos={img.StrokePosition}, tangent.z={vert.tangent.z}");
+                    }
+                }
+
+                // Test 34: Outside Stroke Mesh Geometry Expansion
+                {
+                    var go = CreateImageObject("Test34_OutsideStrokeMeshExpansion", testRoot);
+                    var img = go.GetComponent<FigmaImage>();
+                    var rt = go.GetComponent<RectTransform>();
+                    rt.sizeDelta = new Vector2(200, 80); // halfSize = (100, 40)
+                    img.SetRadius(16f);
+                    img.SetStrokeEnabled(true);
+                    img.SetStrokeWidth(8f);
+                    img.SetStrokePosition(FigmaStrokePosition.Outside);
+
+                    VertexHelper vh = new VertexHelper();
+                    img.SendMessage("OnPopulateMesh", vh, SendMessageOptions.DontRequireReceiver);
+
+                    UIVertex v0 = new UIVertex();
+                    UIVertex v1 = new UIVertex();
+                    UIVertex v2 = new UIVertex();
+                    UIVertex v3 = new UIVertex();
+                    if (vh.currentVertCount == 4)
+                    {
+                        vh.PopulateUIVertex(ref v0, 0);
+                        vh.PopulateUIVertex(ref v1, 1);
+                        vh.PopulateUIVertex(ref v2, 2);
+                        vh.PopulateUIVertex(ref v3, 3);
+                    }
+
+                    // Expected expansion: 8px outward on all sides
+                    // Original: x in [-100, 100], y in [-40, 40]
+                    // Expanded: x in [-108, 108], y in [-48, 48]
+                    bool validBounds = Mathf.Approximately(v0.position.x, -108f) && Mathf.Approximately(v0.position.y, -48f) &&
+                                       Mathf.Approximately(v2.position.x, 108f) && Mathf.Approximately(v2.position.y, 48f);
+
+                    if (validBounds)
+                    {
+                        sb.AppendLine("[PASS] Test 34: Outside Stroke Mesh Expansion (200x80, stroke 8px outside) -> Quad expanded 8px on all 4 sides");
+                        passed++;
+                    }
+                    else
+                    {
+                        sb.AppendLine($"[FAIL] Test 34: Bounds mismatch: v0=({v0.position.x}, {v0.position.y}), v2=({v2.position.x}, {v2.position.y})");
+                    }
+                }
+
+                // Test 35: Outside Stroke UV Preservation
+                {
+                    var go = CreateImageObject("Test35_OutsideStrokeUV", testRoot);
+                    var img = go.GetComponent<FigmaImage>();
+                    Texture2D tex = new Texture2D(32, 32);
+                    Sprite spr = Sprite.Create(tex, new Rect(0, 0, 32, 32), new Vector2(0.5f, 0.5f));
+                    img.sprite = spr;
+                    img.SetStrokeEnabled(true);
+                    img.SetStrokeWidth(10f);
+                    img.SetStrokePosition(FigmaStrokePosition.Outside);
+
+                    VertexHelper vh = new VertexHelper();
+                    img.SendMessage("OnPopulateMesh", vh, SendMessageOptions.DontRequireReceiver);
+
+                    UIVertex v0 = new UIVertex();
+                    UIVertex v2 = new UIVertex();
+                    if (vh.currentVertCount == 4)
+                    {
+                        vh.PopulateUIVertex(ref v0, 0);
+                        vh.PopulateUIVertex(ref v2, 2);
+                    }
+
+                    // UV coordinates expand proportionally so sprite stays centered inside [0, 1] relative to original 200x80
+                    // Original width 200, pad 10 -> u span expands by 10/200 = 0.05 on left and right: uv0.x = -0.05, uv2.x = 1.05
+                    bool validUV = Mathf.Approximately(v0.uv0.x, -0.05f) && Mathf.Approximately(v2.uv0.x, 1.05f);
+
+                    UnityEngine.Object.DestroyImmediate(spr);
+                    UnityEngine.Object.DestroyImmediate(tex);
+
+                    if (validUV)
+                    {
+                        sb.AppendLine("[PASS] Test 35: Outside Stroke UV Preservation -> UV0 adjusted proportionally (-0.05 to 1.05), preserving sprite aspect");
+                        passed++;
+                    }
+                    else
+                    {
+                        sb.AppendLine($"[FAIL] Test 35: UV0 mismatch: v0.uv0.x={v0.uv0.x}, v2.uv0.x={v2.uv0.x}");
+                    }
+                }
+
+                // Test 36: Outside Stroke + Independent Corner Radii
+                {
+                    var go = CreateImageObject("Test36_OutsideStrokeIndependentCorners", testRoot);
+                    var img = go.GetComponent<FigmaImage>();
+                    img.SetCornerRadii(32f, 16f, 24f, 8f);
+                    img.SetStrokeEnabled(true);
+                    img.SetStrokeWidth(5f);
+                    img.SetStrokePosition(FigmaStrokePosition.Outside);
+
+                    Vector4 r = img.GetNormalizedRadii();
+                    VertexHelper vh = new VertexHelper();
+                    img.SendMessage("OnPopulateMesh", vh, SendMessageOptions.DontRequireReceiver);
+                    UIVertex v0 = new UIVertex();
+                    if (vh.currentVertCount > 0)
+                    {
+                        vh.PopulateUIVertex(ref v0, 0);
+                    }
+
+                    bool radiiValid = Mathf.Approximately(r.x, 32f) && Mathf.Approximately(r.y, 16f) &&
+                                      Mathf.Approximately(r.z, 24f) && Mathf.Approximately(r.w, 8f);
+                    bool streamValid = Mathf.Approximately(v0.uv2.x, 32f) && Mathf.Approximately(v0.tangent.x, 5f) && Mathf.Approximately(v0.tangent.z, 3f);
+
+                    if (radiiValid && streamValid)
+                    {
+                        sb.AppendLine("[PASS] Test 36: Outside Stroke + Independent Corners (32, 16, 24, 8) -> Radii & Outside Stroke co-exist");
+                        passed++;
+                    }
+                    else
+                    {
+                        sb.AppendLine($"[FAIL] Test 36: Radii or stream failed: radii={r}, tangent.z={v0.tangent.z}");
+                    }
+                }
+
+                // Test 37: Outside Stroke + Drop Shadow Combined Expansion & Tangent Stream
+                {
+                    var go = CreateImageObject("Test37_OutsideStrokeDropShadow", testRoot);
+                    var img = go.GetComponent<FigmaImage>();
+                    var rt = go.GetComponent<RectTransform>();
+                    rt.sizeDelta = new Vector2(200, 80);
+                    img.SetRadius(16f);
+                    img.SetStrokeEnabled(true);
+                    img.SetStrokeWidth(6f);
+                    img.SetStrokePosition(FigmaStrokePosition.Outside);
+                    img.SetDropShadowEnabled(true);
+                    img.SetDropShadowOffset(0f, 4f);
+                    img.SetDropShadowBlur(8f);
+                    img.SetDropShadowSpread(0f);
+
+                    VertexHelper vh = new VertexHelper();
+                    img.SendMessage("OnPopulateMesh", vh, SendMessageOptions.DontRequireReceiver);
+
+                    UIVertex v0 = new UIVertex();
+                    UIVertex v2 = new UIVertex();
+                    if (vh.currentVertCount == 4)
+                    {
+                        vh.PopulateUIVertex(ref v0, 0);
+                        vh.PopulateUIVertex(ref v2, 2);
+                    }
+
+                    // strokePad = 6. shadowExtent = 8 * 1.5 + 2 = 14.
+                    // leftPad = 6 + 14 = 20 -> v0.x = -100 - 20 = -120.
+                    // rightPad = 6 + 14 = 20 -> v2.x = 100 + 20 = 120.
+                    // bottomPad = 6 + 14 + 4 = 24 -> v0.y = -40 - 24 = -64.
+                    // topPad = 6 + 14 = 20 -> v2.y = 40 + 20 = 60.
+                    bool boundsOk = Mathf.Approximately(v0.position.x, -120f) && Mathf.Approximately(v2.position.x, 120f) &&
+                                    Mathf.Approximately(v0.position.y, -64f) && Mathf.Approximately(v2.position.y, 60f);
+                    bool streamsOk = Mathf.Approximately(v0.tangent.z, 3f) && Mathf.Approximately(v0.normal.z, 8f);
+
+                    if (boundsOk && streamsOk)
+                    {
+                        sb.AppendLine("[PASS] Test 37: Outside Stroke + Drop Shadow -> Combined mesh expansion (20px horizontal, 24px bottom) & streams valid");
+                        passed++;
+                    }
+                    else
+                    {
+                        sb.AppendLine($"[FAIL] Test 37: Bounds/Streams failed: v0=({v0.position.x}, {v0.position.y}), v2=({v2.position.x}, {v2.position.y}), tangent.z={v0.tangent.z}");
+                    }
+                }
+
+                // Test 38: Outside Stroke + Mask Stencil & IgnoreInMask Helper Overlay
+                {
+                    var go = CreateImageObject("Test38_OutsideStrokeMask", testRoot);
+                    var img = go.GetComponent<FigmaImage>();
+                    var mask = go.AddComponent<Mask>();
+
+                    img.SetRadius(12f);
+                    img.SetStrokeEnabled(true);
+                    img.SetStrokeWidth(6f);
+                    img.SetStrokeColor(Color.magenta);
+                    img.SetStrokePosition(FigmaStrokePosition.Outside);
+                    img.SetMaskIgnoreStroke(true);
+
+                    VertexHelper vh = new VertexHelper();
+                    img.SendMessage("OnPopulateMesh", vh, SendMessageOptions.DontRequireReceiver);
+                    UIVertex v0 = new UIVertex();
+                    if (vh.currentVertCount > 0)
+                    {
+                        vh.PopulateUIVertex(ref v0, 0);
+                    }
+
+                    bool tangentFlag4 = Mathf.Approximately(v0.tangent.z, 4f);
+
+                    var mi = typeof(FigmaImage).GetMethod("ExecuteHelperUpdates", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                    mi?.Invoke(img, null);
+
+                    Transform overlayTr = go.transform.Find("[FigmaImage_OutlineOverlay]");
+                    bool overlayCreated = overlayTr != null;
+                    bool overlayCorrect = false;
+
+                    if (overlayCreated)
+                    {
+                        var overlayImg = overlayTr.GetComponent<FigmaImage>();
+                        overlayCorrect = overlayImg != null &&
+                                         !overlayImg.maskable &&
+                                         overlayImg.StrokePosition == FigmaStrokePosition.Outside &&
+                                         Mathf.Approximately(overlayImg.StrokeWidth, 6f) &&
+                                         overlayImg.StrokeColor == Color.magenta;
+                    }
+
+                    if (tangentFlag4 && overlayCreated && overlayCorrect)
+                    {
+                        sb.AppendLine("[PASS] Test 38: Outside Stroke + Mask Ignore -> tangent.z=4 streamed, overlay created with Position=Outside");
+                        passed++;
+                    }
+                    else
+                    {
+                        sb.AppendLine($"[FAIL] Test 38: Outside stroke mask failed: tangent.z={v0.tangent.z}, created={overlayCreated}, correct={overlayCorrect}");
+                    }
+                }
+
+                // Test 39: Outside Stroke Raycast Hit Area Validation
+                {
+                    var go = CreateImageObject("Test39_OutsideStrokeRaycast", testRoot);
+                    var img = go.GetComponent<FigmaImage>();
+                    var rt = go.GetComponent<RectTransform>();
+                    rt.sizeDelta = new Vector2(200, 80); // halfSize 100x40
+                    img.SetRadius(16f);
+                    img.SetStrokeEnabled(true);
+                    img.SetStrokeWidth(10f);
+                    img.SetStrokePosition(FigmaStrokePosition.Outside);
+                    img.UseRoundedRaycast = true;
+
+                    Vector2 centerScreen = RectTransformUtility.WorldToScreenPoint(null, rt.position);
+
+                    // Point 1: Inside original rect (center) -> should be hit
+                    bool centerHit = img.IsRaycastLocationValid(centerScreen, null);
+
+                    // Point 2: 5px outside the right edge (x = +105) -> on the outside stroke! Should be hit
+                    Vector2 onStrokeScreen = centerScreen + new Vector2(105f, 0f);
+                    bool onStrokeHit = img.IsRaycastLocationValid(onStrokeScreen, null);
+
+                    // Point 3: 20px outside the right edge (x = +120) -> outside the stroke! Should NOT be hit
+                    Vector2 outsideStrokeScreen = centerScreen + new Vector2(120f, 0f);
+                    bool outsideStrokeHit = img.IsRaycastLocationValid(outsideStrokeScreen, null);
+
+                    // Check raycastPadding expansion
+                    bool paddingExpanded = Mathf.Approximately(img.raycastPadding.x, -10f) &&
+                                           Mathf.Approximately(img.raycastPadding.y, -10f) &&
+                                           Mathf.Approximately(img.raycastPadding.z, -10f) &&
+                                           Mathf.Approximately(img.raycastPadding.w, -10f);
+
+                    if (centerHit && onStrokeHit && !outsideStrokeHit && paddingExpanded)
+                    {
+                        sb.AppendLine("[PASS] Test 39: Outside Stroke Raycast -> 5px outside hits stroke, 20px outside rejected, raycastPadding expanded to -10");
+                        passed++;
+                    }
+                    else
+                    {
+                        sb.AppendLine($"[FAIL] Test 39: Raycast validation failed: centerHit={centerHit}, onStrokeHit={onStrokeHit}, outsideHit={outsideStrokeHit}, padding={img.raycastPadding}");
+                    }
+                }
+
+                // Test 40: Inner Shadow Settings
+                {
+                    var go = CreateImageObject("Test40_InnerShadowSettings", testRoot);
+                    var img = go.GetComponent<FigmaImage>();
+                    img.SetInnerShadowEnabled(true);
+                    img.SetInnerShadowOffset(4f, -8f);
+                    img.SetInnerShadowBlur(6f);
+                    img.SetInnerShadowSpread(2f);
+                    img.SetInnerShadowColor(new Color(0f, 0f, 0f, 0.3f));
+
+                    bool ok = img.InnerShadowEnabled &&
+                              Mathf.Approximately(img.InnerShadowOffsetX, 4f) &&
+                              Mathf.Approximately(img.InnerShadowOffsetY, -8f) &&
+                              img.InnerShadowOffset == new Vector2(4f, -8f) &&
+                              Mathf.Approximately(img.InnerShadowBlur, 6f) &&
+                              Mathf.Approximately(img.InnerShadowSpread, 2f) &&
+                              img.InnerShadowColor == new Color(0f, 0f, 0f, 0.3f);
+
+                    if (ok)
+                    {
+                        sb.AppendLine("[PASS] Test 40: Inner Shadow Settings (offset 4,-8, blur 6, spread 2, a 0.3) -> Configured correctly");
+                        passed++;
+                    }
+                    else
+                    {
+                        sb.AppendLine($"[FAIL] Test 40: Settings mismatch: enabled={img.InnerShadowEnabled}, offset={img.InnerShadowOffset}, blur={img.InnerShadowBlur}, spread={img.InnerShadowSpread}");
+                    }
+                }
+
+                // Test 41: Blur Clamp (negative blur clamped to 0)
+                {
+                    var go = CreateImageObject("Test41_BlurClamp", testRoot);
+                    var img = go.GetComponent<FigmaImage>();
+                    img.SetInnerShadowBlur(-10f);
+
+                    if (Mathf.Approximately(img.InnerShadowBlur, 0f) && Mathf.Approximately(img.InnerShadow.Blur, 0f))
+                    {
+                        sb.AppendLine("[PASS] Test 41: Blur Clamp (-10 -> 0) -> Clamped safely to zero");
+                        passed++;
+                    }
+                    else
+                    {
+                        sb.AppendLine($"[FAIL] Test 41: Expected blur clamped to 0, got {img.InnerShadowBlur}");
+                    }
+                }
+
+                // Test 42: Negative Spread Preserved
+                {
+                    var go = CreateImageObject("Test42_NegativeSpread", testRoot);
+                    var img = go.GetComponent<FigmaImage>();
+                    img.SetInnerShadowSpread(-6f);
+
+                    if (Mathf.Approximately(img.InnerShadowSpread, -6f) && Mathf.Approximately(img.InnerShadow.Spread, -6f))
+                    {
+                        sb.AppendLine("[PASS] Test 42: Negative Spread (-6) -> Preserved without clamping");
+                        passed++;
+                    }
+                    else
+                    {
+                        sb.AppendLine($"[FAIL] Test 42: Expected spread -6, got {img.InnerShadowSpread}");
+                    }
+                }
+
+                // Test 43: No Mesh Expansion (Inner Shadow does not expand geometry)
+                {
+                    var go = CreateImageObject("Test43_NoMeshExpansion", testRoot);
+                    var img = go.GetComponent<FigmaImage>();
+                    var rt = go.GetComponent<RectTransform>();
+                    rt.sizeDelta = new Vector2(200, 80);
+
+                    // First populate without inner shadow
+                    VertexHelper vhBase = new VertexHelper();
+                    img.SendMessage("OnPopulateMesh", vhBase, SendMessageOptions.DontRequireReceiver);
+                    UIVertex baseV0 = new UIVertex();
+                    UIVertex baseV2 = new UIVertex();
+                    vhBase.PopulateUIVertex(ref baseV0, 0);
+                    vhBase.PopulateUIVertex(ref baseV2, 2);
+
+                    // Enable inner shadow with large offset, blur, spread
+                    img.SetInnerShadowEnabled(true);
+                    img.SetInnerShadowOffset(30f, 30f);
+                    img.SetInnerShadowBlur(20f);
+                    img.SetInnerShadowSpread(10f);
+
+                    VertexHelper vhInner = new VertexHelper();
+                    img.SendMessage("OnPopulateMesh", vhInner, SendMessageOptions.DontRequireReceiver);
+                    UIVertex innerV0 = new UIVertex();
+                    UIVertex innerV2 = new UIVertex();
+                    vhInner.PopulateUIVertex(ref innerV0, 0);
+                    vhInner.PopulateUIVertex(ref innerV2, 2);
+
+                    bool boundsMatch = Mathf.Approximately(baseV0.position.x, innerV0.position.x) &&
+                                       Mathf.Approximately(baseV0.position.y, innerV0.position.y) &&
+                                       Mathf.Approximately(baseV2.position.x, innerV2.position.x) &&
+                                       Mathf.Approximately(baseV2.position.y, innerV2.position.y);
+
+                    if (boundsMatch)
+                    {
+                        sb.AppendLine("[PASS] Test 43: No Mesh Expansion -> Inner shadow preserves base image geometry bounds exactly");
+                        passed++;
+                    }
+                    else
+                    {
+                        sb.AppendLine($"[FAIL] Test 43: Mesh bounds changed: base=({baseV0.position}, {baseV2.position}), inner=({innerV0.position}, {innerV2.position})");
+                    }
+                }
+
+                // Test 44: Inner Layer Created (triangle stream duplicated with marker tangent.z = 10)
+                {
+                    var go = CreateImageObject("Test44_InnerLayerCreated", testRoot);
+                    var img = go.GetComponent<FigmaImage>();
+                    img.SetInnerShadowEnabled(true);
+                    img.SetInnerShadowColor(new Color(0f, 0f, 0f, 0.5f));
+
+                    VertexHelper vh = new VertexHelper();
+                    img.SendMessage("OnPopulateMesh", vh, SendMessageOptions.DontRequireReceiver);
+
+                    bool hasInnerMarker = false;
+                    UIVertex vert = new UIVertex();
+                    for (int i = 0; i < vh.currentVertCount; i++)
+                    {
+                        vh.PopulateUIVertex(ref vert, i);
+                        if (Mathf.Approximately(vert.tangent.z, 10f))
+                        {
+                            hasInnerMarker = true;
+                            break;
+                        }
+                    }
+
+                    if (vh.currentVertCount > 4 && hasInnerMarker)
+                    {
+                        sb.AppendLine($"[PASS] Test 44: Inner Layer Created -> Duplicate triangle stream generated ({vh.currentVertCount} verts) with marker tangent.z=10");
+                        passed++;
+                    }
+                    else
+                    {
+                        sb.AppendLine($"[FAIL] Test 44: Inner layer failed: vertCount={vh.currentVertCount}, hasMarker={hasInnerMarker}");
+                    }
+                }
+
+                // Test 45: Inner Parameter Stream (packed colors, offsets, blur, spread)
+                {
+                    var go = CreateImageObject("Test45_InnerParameterStream", testRoot);
+                    var img = go.GetComponent<FigmaImage>();
+                    Color shadowCol = new Color(0.2f, 0.4f, 0.6f, 0.8f);
+                    img.SetInnerShadowEnabled(true);
+                    img.SetInnerShadowOffset(5f, -7f);
+                    img.SetInnerShadowBlur(12f);
+                    img.SetInnerShadowSpread(3f);
+                    img.SetInnerShadowColor(shadowCol);
+
+                    VertexHelper vh = new VertexHelper();
+                    img.SendMessage("OnPopulateMesh", vh, SendMessageOptions.DontRequireReceiver);
+
+                    bool streamValid = false;
+                    UIVertex vert = new UIVertex();
+                    for (int i = 0; i < vh.currentVertCount; i++)
+                    {
+                        vh.PopulateUIVertex(ref vert, i);
+                        if (Mathf.Approximately(vert.tangent.z, 10f))
+                        {
+                            // Unpack color from uv3.x and uv3.y
+                            float pRG = vert.uv3.x;
+                            float pBA = vert.uv3.y;
+                            float r = Mathf.Floor(pRG / 256f) / 255f;
+                            float g = (pRG - Mathf.Floor(pRG / 256f) * 256f) / 255f;
+                            float b = Mathf.Floor(pBA / 256f) / 255f;
+                            float a = (pBA - Mathf.Floor(pBA / 256f) * 256f) / 255f;
+
+                            bool colOk = Mathf.Abs(r - shadowCol.r) < 0.01f &&
+                                         Mathf.Abs(g - shadowCol.g) < 0.01f &&
+                                         Mathf.Abs(b - shadowCol.b) < 0.01f &&
+                                         Mathf.Abs(a - shadowCol.a) < 0.01f;
+
+                            bool offsetOk = Mathf.Approximately(vert.uv3.z, 5f) && Mathf.Approximately(vert.uv3.w, -7f);
+                            bool blurOk = Mathf.Approximately(vert.tangent.x, 12f);
+                            bool spreadOk = Mathf.Approximately(vert.tangent.y, 3f);
+
+                            if (colOk && offsetOk && blurOk && spreadOk)
+                            {
+                                streamValid = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (streamValid)
+                    {
+                        sb.AppendLine("[PASS] Test 45: Inner Parameter Stream -> Packed color, offsets, blur, and spread streamed correctly");
+                        passed++;
+                    }
+                    else
+                    {
+                        sb.AppendLine("[FAIL] Test 45: Inner parameter streaming failed to match expected values");
+                    }
+                }
+
+                // Test 46: Disabled Has Zero Extra Geometry
+                {
+                    var go = CreateImageObject("Test46_DisabledZeroGeometry", testRoot);
+                    var img = go.GetComponent<FigmaImage>();
+                    img.SetInnerShadowEnabled(false);
+
+                    VertexHelper vh = new VertexHelper();
+                    img.SendMessage("OnPopulateMesh", vh, SendMessageOptions.DontRequireReceiver);
+
+                    if (vh.currentVertCount == 4)
+                    {
+                        sb.AppendLine("[PASS] Test 46: Disabled Has Zero Extra Geometry -> 4 vertices produced (standard single quad)");
+                        passed++;
+                    }
+                    else
+                    {
+                        sb.AppendLine($"[FAIL] Test 46: Expected 4 vertices when disabled, got {vh.currentVertCount}");
+                    }
+                }
+
+                // Test 47: Zero Alpha Has Zero Extra Geometry
+                {
+                    var go = CreateImageObject("Test47_ZeroAlphaZeroGeometry", testRoot);
+                    var img = go.GetComponent<FigmaImage>();
+                    img.SetInnerShadowEnabled(true);
+                    img.SetInnerShadowColor(new Color(0f, 0f, 0f, 0f));
+
+                    VertexHelper vh = new VertexHelper();
+                    img.SendMessage("OnPopulateMesh", vh, SendMessageOptions.DontRequireReceiver);
+
+                    if (vh.currentVertCount == 4)
+                    {
+                        sb.AppendLine("[PASS] Test 47: Zero Alpha Has Zero Extra Geometry -> 4 vertices produced when color alpha is 0");
+                        passed++;
+                    }
+                    else
+                    {
+                        sb.AppendLine($"[FAIL] Test 47: Expected 4 vertices with zero alpha, got {vh.currentVertCount}");
+                    }
+                }
+
+                // Test 48: Drop + Inner Coexistence
+                {
+                    var go = CreateImageObject("Test48_DropAndInner", testRoot);
+                    var img = go.GetComponent<FigmaImage>();
+                    var rt = go.GetComponent<RectTransform>();
+                    rt.sizeDelta = new Vector2(200, 80);
+
+                    // Configure Drop Shadow only
+                    img.SetDropShadowEnabled(true);
+                    img.SetDropShadowOffset(0f, 4f);
+                    img.SetDropShadowBlur(8f);
+                    img.SetDropShadowSpread(0f);
+                    img.SetDropShadowColor(new Color(0f, 0f, 0f, 0.25f));
+
+                    VertexHelper vhDropOnly = new VertexHelper();
+                    img.SendMessage("OnPopulateMesh", vhDropOnly, SendMessageOptions.DontRequireReceiver);
+                    UIVertex dropV0 = new UIVertex();
+                    vhDropOnly.PopulateUIVertex(ref dropV0, 0);
+
+                    // Now also enable Inner Shadow
+                    img.SetInnerShadowEnabled(true);
+                    img.SetInnerShadowOffset(2f, 2f);
+                    img.SetInnerShadowBlur(4f);
+                    img.SetInnerShadowColor(new Color(0f, 0f, 0f, 0.3f));
+
+                    VertexHelper vhBoth = new VertexHelper();
+                    img.SendMessage("OnPopulateMesh", vhBoth, SendMessageOptions.DontRequireReceiver);
+                    UIVertex bothV0 = new UIVertex();
+                    vhBoth.PopulateUIVertex(ref bothV0, 0);
+
+                    bool boundsEqual = Mathf.Approximately(dropV0.position.x, bothV0.position.x) &&
+                                       Mathf.Approximately(dropV0.position.y, bothV0.position.y);
+
+                    bool hasInnerLayer = false;
+                    UIVertex temp = new UIVertex();
+                    for (int i = 0; i < vhBoth.currentVertCount; i++)
+                    {
+                        vhBoth.PopulateUIVertex(ref temp, i);
+                        if (Mathf.Approximately(temp.tangent.z, 10f))
+                        {
+                            hasInnerLayer = true;
+                            break;
+                        }
+                    }
+
+                    if (boundsEqual && hasInnerLayer)
+                    {
+                        sb.AppendLine("[PASS] Test 48: Drop + Inner Coexistence -> Drop shadow expansion bounds unchanged & Inner shadow layer active");
+                        passed++;
+                    }
+                    else
+                    {
+                        sb.AppendLine($"[FAIL] Test 48: Drop + Inner failed: boundsEqual={boundsEqual}, hasInnerLayer={hasInnerLayer}");
+                    }
+                }
+
+                // Test 49: Stroke + Inner Coexistence
+                {
+                    var go = CreateImageObject("Test49_StrokeAndInner", testRoot);
+                    var img = go.GetComponent<FigmaImage>();
+                    img.SetStrokeEnabled(true);
+                    img.SetStrokeWidth(5f);
+                    img.SetStrokeColor(Color.red);
+                    img.SetStrokePosition(FigmaStrokePosition.Inside);
+
+                    img.SetInnerShadowEnabled(true);
+                    img.SetInnerShadowBlur(6f);
+                    img.SetInnerShadowColor(new Color(0f, 0f, 0f, 0.4f));
+
+                    VertexHelper vh = new VertexHelper();
+                    img.SendMessage("OnPopulateMesh", vh, SendMessageOptions.DontRequireReceiver);
+
+                    bool strokeParamsPreservedOnInner = false;
+                    UIVertex vert = new UIVertex();
+                    for (int i = 0; i < vh.currentVertCount; i++)
+                    {
+                        vh.PopulateUIVertex(ref vert, i);
+                        if (Mathf.Approximately(vert.tangent.z, 10f))
+                        {
+                            bool widthOk = Mathf.Approximately(vert.tangent.w, 5f);
+                            bool strokeOn = Mathf.Approximately(vert.normal.y, 1f);
+                            bool insideStroke = Mathf.Approximately(vert.normal.z, 0f);
+
+                            if (widthOk && strokeOn && insideStroke)
+                            {
+                                strokeParamsPreservedOnInner = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (strokeParamsPreservedOnInner)
+                    {
+                        sb.AppendLine("[PASS] Test 49: Stroke + Inner Coexistence -> Stroke width (5px) and flags passed to inner layer for masking");
+                        passed++;
+                    }
+                    else
+                    {
+                        sb.AppendLine("[FAIL] Test 49: Stroke parameters on inner layer were missing or incorrect");
+                    }
+                }
+
+                // Test 50: Independent Corners + Inner
+                {
+                    var go = CreateImageObject("Test50_IndependentCornersInner", testRoot);
+                    var img = go.GetComponent<FigmaImage>();
+                    img.SetCornerRadii(32f, 8f, 24f, 0f);
+                    img.SetInnerShadowEnabled(true);
+                    img.SetInnerShadowBlur(4f);
+
+                    VertexHelper vh = new VertexHelper();
+                    img.SendMessage("OnPopulateMesh", vh, SendMessageOptions.DontRequireReceiver);
+
+                    bool uv2Matches = false;
+                    UIVertex vert = new UIVertex();
+                    for (int i = 0; i < vh.currentVertCount; i++)
+                    {
+                        vh.PopulateUIVertex(ref vert, i);
+                        if (Mathf.Approximately(vert.tangent.z, 10f))
+                        {
+                            if (Mathf.Approximately(vert.uv2.x, 32f) &&
+                                Mathf.Approximately(vert.uv2.y, 8f) &&
+                                Mathf.Approximately(vert.uv2.z, 24f) &&
+                                Mathf.Approximately(vert.uv2.w, 0f))
+                            {
+                                uv2Matches = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (uv2Matches)
+                    {
+                        sb.AppendLine("[PASS] Test 50: Independent Corners + Inner -> UV2 corner radii (32, 8, 24, 0) identical on inner layer");
+                        passed++;
+                    }
+                    else
+                    {
+                        sb.AppendLine("[FAIL] Test 50: UV2 corner radii mismatch on inner shadow layer");
+                    }
+                }
+
+                // Test 51: Pill + Inner
+                {
+                    var go = CreateImageObject("Test51_PillInner", testRoot);
+                    var img = go.GetComponent<FigmaImage>();
+                    var rt = go.GetComponent<RectTransform>();
+                    rt.sizeDelta = new Vector2(200, 48);
+                    img.SetRadius(24f);
+                    img.SetInnerShadowEnabled(true);
+
+                    Vector4 r = img.GetNormalizedRadii();
+                    VertexHelper vh = new VertexHelper();
+                    img.SendMessage("OnPopulateMesh", vh, SendMessageOptions.DontRequireReceiver);
+
+                    bool pillRadiusPreserved = Mathf.Approximately(r.x, 24f) &&
+                                               Mathf.Approximately(r.y, 24f) &&
+                                               Mathf.Approximately(r.z, 24f) &&
+                                               Mathf.Approximately(r.w, 24f);
+
+                    bool innerLayerHasPillRadii = false;
+                    UIVertex vert = new UIVertex();
+                    for (int i = 0; i < vh.currentVertCount; i++)
+                    {
+                        vh.PopulateUIVertex(ref vert, i);
+                        if (Mathf.Approximately(vert.tangent.z, 10f))
+                        {
+                            if (Mathf.Approximately(vert.uv2.x, 24f) && Mathf.Approximately(vert.uv2.y, 24f))
+                            {
+                                innerLayerHasPillRadii = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (pillRadiusPreserved && innerLayerHasPillRadii)
+                    {
+                        sb.AppendLine("[PASS] Test 51: Pill + Inner (200x48, r=24) -> Normalized radii (24, 24, 24, 24) preserved on inner layer");
+                        passed++;
+                    }
+                    else
+                    {
+                        sb.AppendLine($"[FAIL] Test 51: Pill radii check failed: normalized={r}, innerValid={innerLayerHasPillRadii}");
+                    }
+                }
+
+                // Test 52: Mask Compatibility (Mask with Inner Shadow has no helper gameobjects)
+                {
+                    var go = CreateImageObject("Test52_MaskInner", testRoot);
+                    var img = go.GetComponent<FigmaImage>();
+                    var mask = go.AddComponent<Mask>();
+                    img.SetInnerShadowEnabled(true);
+                    img.SetInnerShadowBlur(4f);
+
+                    var mi = typeof(FigmaImage).GetMethod("ExecuteHelperUpdates", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                    mi?.Invoke(img, null);
+
+                    Transform overlayTr = go.transform.Find("[FigmaImage_OutlineOverlay]");
+                    Transform underlayTr = go.transform.parent != null ? go.transform.parent.Find($"[FigmaImage_ShadowUnderlay_{go.GetInstanceID()}]") : null;
+                    bool noExtraHelpers = overlayTr == null && underlayTr == null;
+                    bool matValid = img.materialForRendering != null;
+
+                    if (noExtraHelpers && matValid)
+                    {
+                        sb.AppendLine("[PASS] Test 52: Mask Compatibility -> Material valid, zero unnecessary helper GameObjects spawned for Inner Shadow");
+                        passed++;
+                    }
+                    else
+                    {
+                        sb.AppendLine($"[FAIL] Test 52: Mask check failed: noExtraHelpers={noExtraHelpers}, matValid={matValid}");
+                    }
+                }
+
+                // Test 53: Mask Ignore Stroke
+                {
+                    var go = CreateImageObject("Test53_MaskIgnoreStrokeInner", testRoot);
+                    var img = go.GetComponent<FigmaImage>();
+                    img.SetStrokeEnabled(true);
+                    img.SetStrokeWidth(4f);
+                    img.SetMaskIgnoreStroke(true);
+                    img.SetInnerShadowEnabled(true);
+
+                    VertexHelper vh = new VertexHelper();
+                    img.SendMessage("OnPopulateMesh", vh, SendMessageOptions.DontRequireReceiver);
+
+                    bool ignoreMaskFlagCarried = false;
+                    UIVertex vert = new UIVertex();
+                    for (int i = 0; i < vh.currentVertCount; i++)
+                    {
+                        vh.PopulateUIVertex(ref vert, i);
+                        if (Mathf.Approximately(vert.tangent.z, 10f))
+                        {
+                            if (Mathf.Approximately(vert.normal.x, 1f))
+                            {
+                                ignoreMaskFlagCarried = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (ignoreMaskFlagCarried)
+                    {
+                        sb.AppendLine("[PASS] Test 53: Mask Ignore Stroke -> normal.x=1 (IgnoreInMask) streamed to inner shadow layer");
+                        passed++;
+                    }
+                    else
+                    {
+                        sb.AppendLine("[FAIL] Test 53: normal.x did not carry IgnoreInMask flag to inner shadow layer");
+                    }
+                }
+
+                // Test 54: RectMask2D Compatibility
+                {
+                    var parentGo = new GameObject("Test54_Parent", typeof(RectTransform), typeof(RectMask2D));
+                    parentGo.transform.SetParent(testRoot.transform, false);
+
+                    var go = CreateImageObject("Test54_RectMask2DInner", parentGo);
+                    var img = go.GetComponent<FigmaImage>();
+                    img.SetInnerShadowEnabled(true);
+
+                    Material renderMat = img.materialForRendering;
+                    bool matOk = renderMat != null;
+
+                    if (matOk)
+                    {
+                        sb.AppendLine("[PASS] Test 54: RectMask2D Compatibility -> materialForRendering valid under RectMask2D");
+                        passed++;
+                    }
+                    else
+                    {
+                        sb.AppendLine("[FAIL] Test 54: materialForRendering was null under RectMask2D");
+                    }
+                }
+
+                // Test 55: Shared Material (batching preserved, zero unique material clones)
+                {
+                    var go1 = CreateImageObject("Test55_SharedMat1", testRoot);
+                    var img1 = go1.GetComponent<FigmaImage>();
+                    img1.SetInnerShadowEnabled(true);
+                    img1.SetInnerShadowBlur(4f);
+                    img1.SetInnerShadowColor(Color.red);
+
+                    var go2 = CreateImageObject("Test55_SharedMat2", testRoot);
+                    var img2 = go2.GetComponent<FigmaImage>();
+                    img2.SetInnerShadowEnabled(true);
+                    img2.SetInnerShadowBlur(10f);
+                    img2.SetInnerShadowColor(Color.blue);
+
+                    bool shared = ReferenceEquals(img1.defaultMaterial, img2.defaultMaterial) && img1.defaultMaterial != null;
+
+                    if (shared)
+                    {
+                        sb.AppendLine("[PASS] Test 55: Shared Material -> Both instances share exact same defaultMaterial instance");
+                        passed++;
+                    }
+                    else
+                    {
+                        sb.AppendLine("[FAIL] Test 55: Instances did not share defaultMaterial");
+                    }
+                }
+
+                // Test 56: Dynamic Resize
+                {
+                    var go = CreateImageObject("Test56_DynamicResize", testRoot);
+                    var img = go.GetComponent<FigmaImage>();
+                    var rt = go.GetComponent<RectTransform>();
+                    rt.sizeDelta = new Vector2(200, 80);
+                    img.SetInnerShadowEnabled(true);
+                    img.SetInnerShadowBlur(8f);
+
+                    // Resize to 400x120
+                    rt.sizeDelta = new Vector2(400, 120);
+
+                    VertexHelper vh = new VertexHelper();
+                    img.SendMessage("OnPopulateMesh", vh, SendMessageOptions.DontRequireReceiver);
+
+                    bool halfSizeUpdated = false;
+                    UIVertex vert = new UIVertex();
+                    for (int i = 0; i < vh.currentVertCount; i++)
+                    {
+                        vh.PopulateUIVertex(ref vert, i);
+                        if (Mathf.Approximately(vert.tangent.z, 10f))
+                        {
+                            if (Mathf.Approximately(vert.uv1.z, 200f) && Mathf.Approximately(vert.uv1.w, 60f))
+                            {
+                                halfSizeUpdated = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (halfSizeUpdated && Mathf.Approximately(img.InnerShadowBlur, 8f))
+                    {
+                        sb.AppendLine("[PASS] Test 56: Dynamic Resize -> halfSize updated to (200, 60) on inner stream and settings preserved");
+                        passed++;
+                    }
+                    else
+                    {
+                        sb.AppendLine("[FAIL] Test 56: Dynamic resize failed to update halfSize on inner stream");
+                    }
+                }
+
+                // Test 57: Base Color Preservation with Inner Shadow
+                {
+                    var go = CreateImageObject("Test57_BaseColorPreserved", testRoot);
+                    var img = go.GetComponent<FigmaImage>();
+                    img.color = new Color(1f, 0.2f, 0.3f, 1f);
+                    img.SetInnerShadowEnabled(true);
+                    img.SetInnerShadowColor(new Color(0f, 0f, 0f, 0.5f));
+                    img.SetInnerShadowBlur(10f);
+
+                    VertexHelper vh = new VertexHelper();
+                    img.SendMessage("OnPopulateMesh", vh, SendMessageOptions.DontRequireReceiver);
+
+                    bool baseColorPreserved = false;
+                    if (vh.currentVertCount >= 4)
+                    {
+                        UIVertex v0 = new UIVertex();
+                        vh.PopulateUIVertex(ref v0, 0);
+                        baseColorPreserved = Mathf.Abs(v0.color.r - 255) <= 1 &&
+                                             Mathf.Abs(v0.color.g - 51) <= 1 &&
+                                             Mathf.Abs(v0.color.b - (int)(0.3f * 255f)) <= 2 &&
+                                             v0.tangent.z < 9.5f; // base layer, not overwritten by inner shadow flag
+                    }
+
+                    if (baseColorPreserved)
+                    {
+                        sb.AppendLine("[PASS] Test 57: Base Color Preserved -> Base mesh vertices retain original graphic color with inner shadow enabled");
+                        passed++;
+                    }
+                    else
+                    {
+                        sb.AppendLine("[FAIL] Test 57: Base color was not preserved on mesh vertices");
+                    }
+                }
+
+                // Test 58: Inner Shadow Child Overlay Hierarchy (renders on top of child image elements)
+                {
+                    var go = CreateImageObject("Test58_ChildOverlayHierarchy", testRoot);
+                    var img = go.GetComponent<FigmaImage>();
+                    img.SetInnerShadowEnabled(true);
+                    img.SetInnerShadowBlur(8f);
+
+                    // Add a child image (e.g. avatar or icon)
+                    var childGo = new GameObject("Child_Avatar", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+                    childGo.transform.SetParent(go.transform, false);
+
+                    // Update helpers
+                    var mi = typeof(FigmaImage).GetMethod("ExecuteHelperUpdates", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                    mi?.Invoke(img, null);
+
+                    Transform innerOverlayTr = go.transform.Find("[FigmaImage_InnerShadowOverlay]");
+                    bool overlayExists = innerOverlayTr != null;
+                    bool isLastSibling = overlayExists && innerOverlayTr.GetSiblingIndex() == go.transform.childCount - 1;
+                    bool childBeforeOverlay = overlayExists && childGo.transform.GetSiblingIndex() < innerOverlayTr.GetSiblingIndex();
+
+                    if (overlayExists && isLastSibling && childBeforeOverlay)
+                    {
+                        sb.AppendLine("[PASS] Test 58: Child Overlay Hierarchy -> [FigmaImage_InnerShadowOverlay] created at last sibling index, rendering on top of child elements");
+                        passed++;
+                    }
+                    else
+                    {
+                        sb.AppendLine($"[FAIL] Test 58: Child overlay hierarchy failed: exists={overlayExists}, isLast={isLastSibling}, childBefore={childBeforeOverlay}");
+                    }
+                }
             }
             finally
             {
@@ -1090,6 +2023,15 @@ namespace ProjectArea.UI.Tests
             sb.AppendLine($"=== Result: {passed}/{total} Tests Passed ===");
             return sb.ToString();
         }
+
+#if UNITY_EDITOR
+        [UnityEditor.MenuItem("Tools/FigmaImage/Run All Acceptance Tests", false, 100)]
+        public static void RunAllTestsMenu()
+        {
+            string report = RunAllTests();
+            Debug.Log(report);
+        }
+#endif
 
         private static GameObject CreateImageObject(string name, GameObject parent)
         {

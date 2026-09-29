@@ -19,6 +19,9 @@ namespace ProjectArea.UI
         private FigmaDropShadowSettings m_DropShadow = new FigmaDropShadowSettings();
 
         [SerializeField]
+        private FigmaInnerShadowSettings m_InnerShadow = new FigmaInnerShadowSettings();
+
+        [SerializeField]
         private bool m_UseRoundedRaycast = false;
 
         // Legacy fields for backward compatibility with scene/prefab data
@@ -37,6 +40,7 @@ namespace ProjectArea.UI
         public FigmaCornerRadiusSettings CornerRadius => m_CornerRadius;
         public FigmaStrokeSettings Stroke => m_Stroke;
         public FigmaDropShadowSettings DropShadow => m_DropShadow;
+        public FigmaInnerShadowSettings InnerShadow => m_InnerShadow;
 
         #region Public Properties
 
@@ -150,6 +154,7 @@ namespace ProjectArea.UI
                 if (m_Stroke.Enabled != value)
                 {
                     m_Stroke.Enabled = value;
+                    UpdateRaycastPadding();
                     SetVerticesDirty();
                 }
             }
@@ -164,6 +169,7 @@ namespace ProjectArea.UI
                 if (!Mathf.Approximately(m_Stroke.Width, clamped))
                 {
                     m_Stroke.Width = clamped;
+                    UpdateRaycastPadding();
                     SetVerticesDirty();
                 }
             }
@@ -190,6 +196,7 @@ namespace ProjectArea.UI
                 if (m_Stroke.Position != value)
                 {
                     m_Stroke.Position = value;
+                    UpdateRaycastPadding();
                     SetVerticesDirty();
                 }
             }
@@ -300,10 +307,109 @@ namespace ProjectArea.UI
             }
         }
 
+        public bool InnerShadowEnabled
+        {
+            get => m_InnerShadow.Enabled;
+            set
+            {
+                if (m_InnerShadow.Enabled != value)
+                {
+                    m_InnerShadow.Enabled = value;
+                    SetVerticesDirty();
+                }
+            }
+        }
+
+        public float InnerShadowOffsetX
+        {
+            get => m_InnerShadow.OffsetX;
+            set
+            {
+                if (!Mathf.Approximately(m_InnerShadow.OffsetX, value))
+                {
+                    m_InnerShadow.OffsetX = value;
+                    SetVerticesDirty();
+                }
+            }
+        }
+
+        public float InnerShadowOffsetY
+        {
+            get => m_InnerShadow.OffsetY;
+            set
+            {
+                if (!Mathf.Approximately(m_InnerShadow.OffsetY, value))
+                {
+                    m_InnerShadow.OffsetY = value;
+                    SetVerticesDirty();
+                }
+            }
+        }
+
+        public Vector2 InnerShadowOffset
+        {
+            get => m_InnerShadow.Offset;
+            set
+            {
+                if (m_InnerShadow.Offset != value)
+                {
+                    m_InnerShadow.Offset = value;
+                    SetVerticesDirty();
+                }
+            }
+        }
+
+        public float InnerShadowBlur
+        {
+            get => m_InnerShadow.Blur;
+            set
+            {
+                float clamped = Mathf.Max(0f, value);
+                if (!Mathf.Approximately(m_InnerShadow.Blur, clamped))
+                {
+                    m_InnerShadow.Blur = clamped;
+                    SetVerticesDirty();
+                }
+            }
+        }
+
+        public float InnerShadowSpread
+        {
+            get => m_InnerShadow.Spread;
+            set
+            {
+                if (!Mathf.Approximately(m_InnerShadow.Spread, value))
+                {
+                    m_InnerShadow.Spread = value;
+                    SetVerticesDirty();
+                }
+            }
+        }
+
+        public Color InnerShadowColor
+        {
+            get => m_InnerShadow.Color;
+            set
+            {
+                if (m_InnerShadow.Color != value)
+                {
+                    m_InnerShadow.Color = value;
+                    SetVerticesDirty();
+                }
+            }
+        }
+
         public bool UseRoundedRaycast
         {
             get => m_UseRoundedRaycast;
-            set => m_UseRoundedRaycast = value;
+            set
+            {
+                if (m_UseRoundedRaycast != value)
+                {
+                    m_UseRoundedRaycast = value;
+                    UpdateRaycastPadding();
+                }
+            }
         }
 
         #endregion
@@ -331,12 +437,14 @@ namespace ProjectArea.UI
         public void SetStrokeEnabled(bool enabled)
         {
             m_Stroke.Enabled = enabled;
+            UpdateRaycastPadding();
             SetVerticesDirty();
         }
 
         public void SetStrokeWidth(float width)
         {
             m_Stroke.Width = Mathf.Max(0f, width);
+            UpdateRaycastPadding();
             SetVerticesDirty();
         }
 
@@ -344,6 +452,16 @@ namespace ProjectArea.UI
         {
             m_Stroke.Color = color;
             SetVerticesDirty();
+        }
+
+        public void SetStrokePosition(FigmaStrokePosition position)
+        {
+            if (m_Stroke != null && m_Stroke.Position != position)
+            {
+                m_Stroke.Position = position;
+                UpdateRaycastPadding();
+                SetVerticesDirty();
+            }
         }
 
         public void SetMaskIgnoreStroke(bool ignore)
@@ -389,6 +507,43 @@ namespace ProjectArea.UI
         public void SetDropShadowColor(Color color)
         {
             m_DropShadow.Color = color;
+            SetVerticesDirty();
+        }
+
+        public void SetInnerShadowEnabled(bool enabled)
+        {
+            m_InnerShadow.Enabled = enabled;
+            SetVerticesDirty();
+        }
+
+        public void SetInnerShadowOffset(float x, float y)
+        {
+            m_InnerShadow.OffsetX = x;
+            m_InnerShadow.OffsetY = y;
+            SetVerticesDirty();
+        }
+
+        public void SetInnerShadowOffset(Vector2 offset)
+        {
+            m_InnerShadow.Offset = offset;
+            SetVerticesDirty();
+        }
+
+        public void SetInnerShadowBlur(float blur)
+        {
+            m_InnerShadow.Blur = Mathf.Max(0f, blur);
+            SetVerticesDirty();
+        }
+
+        public void SetInnerShadowSpread(float spread)
+        {
+            m_InnerShadow.Spread = spread;
+            SetVerticesDirty();
+        }
+
+        public void SetInnerShadowColor(Color color)
+        {
+            m_InnerShadow.Color = color;
             SetVerticesDirty();
         }
 
@@ -438,6 +593,7 @@ namespace ProjectArea.UI
         {
             base.OnEnable();
             EnsureCanvasChannels();
+            UpdateRaycastPadding();
             RequestHelperUpdates();
         }
 
@@ -465,10 +621,11 @@ namespace ProjectArea.UI
             if (gameObject.name.StartsWith("[FigmaImage_")) return;
 
             bool isMasked = TryGetComponent<Mask>(out var mask) && mask.enabled;
-            bool needHelpers = isMasked && (
+            bool innerShadowActive = m_InnerShadow != null && m_InnerShadow.Enabled && m_InnerShadow.Color.a > 0.0001f;
+            bool needHelpers = (isMasked && (
                 (m_Stroke != null && m_Stroke.Enabled && m_Stroke.IgnoreInMask) ||
                 (m_DropShadow != null && m_DropShadow.Enabled)
-            );
+            )) || innerShadowActive;
 
             if (needHelpers)
             {
@@ -478,6 +635,11 @@ namespace ProjectArea.UI
             {
                 CleanupHelpers();
             }
+        }
+
+        protected virtual void OnTransformChildrenChanged()
+        {
+            RequestHelperUpdates();
         }
 
         protected override void OnTransformParentChanged()
@@ -531,6 +693,10 @@ namespace ProjectArea.UI
             {
                 m_DropShadow = new FigmaDropShadowSettings();
             }
+            if (m_InnerShadow == null)
+            {
+                m_InnerShadow = new FigmaInnerShadowSettings();
+            }
 
             m_CornerRadius.Radius = Mathf.Max(0f, m_CornerRadius.Radius);
             m_CornerRadius.CornerRadii = new Vector4(
@@ -551,11 +717,26 @@ namespace ProjectArea.UI
 
             m_Stroke.Width = Mathf.Max(0f, m_Stroke.Width);
             m_DropShadow.Blur = Mathf.Max(0f, m_DropShadow.Blur);
+            m_InnerShadow.Blur = Mathf.Max(0f, m_InnerShadow.Blur);
 
             EnsureCanvasChannels();
+            UpdateRaycastPadding();
             SetVerticesDirty();
         }
 #endif
+
+        private void UpdateRaycastPadding()
+        {
+            if (m_UseRoundedRaycast && m_Stroke != null && m_Stroke.Enabled && m_Stroke.Position == FigmaStrokePosition.Outside)
+            {
+                float pad = m_Stroke.Width;
+                raycastPadding = new Vector4(-pad, -pad, -pad, -pad);
+            }
+            else if (raycastPadding.x < 0f && raycastPadding.y < 0f && raycastPadding.z < 0f && raycastPadding.w < 0f)
+            {
+                raycastPadding = Vector4.zero;
+            }
+        }
 
         private void EnsureCanvasChannels()
         {
@@ -623,12 +804,85 @@ namespace ProjectArea.UI
             try
             {
                 bool isMasked = TryGetComponent<Mask>(out var mask) && mask.enabled;
+                UpdateInnerShadowOverlay();
                 UpdateOutlineOverlay(isMasked);
                 UpdateShadowUnderlay(isMasked);
             }
             finally
             {
                 m_IsUpdatingHelpers = false;
+            }
+        }
+
+        private void UpdateInnerShadowOverlay()
+        {
+            bool needInnerShadow = m_InnerShadow != null && m_InnerShadow.Enabled && m_InnerShadow.Color.a > 0.0001f;
+
+            const string overlayName = "[FigmaImage_InnerShadowOverlay]";
+            Transform overlayTr = transform.Find(overlayName);
+
+            if (!needInnerShadow)
+            {
+                if (overlayTr != null)
+                {
+                    if (Application.isPlaying) Destroy(overlayTr.gameObject);
+                    else DestroyImmediate(overlayTr.gameObject);
+                }
+                return;
+            }
+
+            GameObject overlayGo;
+            if (overlayTr == null)
+            {
+                overlayGo = new GameObject(overlayName, typeof(RectTransform), typeof(CanvasRenderer), typeof(FigmaImage));
+                overlayGo.hideFlags = HideFlags.DontSave;
+                overlayGo.transform.SetParent(transform, false);
+            }
+            else
+            {
+                overlayGo = overlayTr.gameObject;
+            }
+
+            if (overlayGo.transform.GetSiblingIndex() != transform.childCount - 1)
+            {
+                overlayGo.transform.SetAsLastSibling();
+            }
+
+            RectTransform rt = (RectTransform)overlayGo.transform;
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.pivot = rectTransform.pivot;
+            rt.anchoredPosition = Vector2.zero;
+            rt.sizeDelta = Vector2.zero;
+            rt.localRotation = Quaternion.identity;
+            rt.localScale = Vector3.one;
+
+            FigmaImage overlayImg = overlayGo.GetComponent<FigmaImage>();
+            overlayImg.maskable = this.maskable;
+            overlayImg.raycastTarget = false;
+            overlayImg.color = new Color(0, 0, 0, 0);
+            overlayImg.CornerRadii = CornerRadii;
+            overlayImg.StrokeEnabled = StrokeEnabled;
+            overlayImg.StrokePosition = StrokePosition;
+            overlayImg.StrokeWidth = StrokeWidth;
+            overlayImg.StrokeColor = StrokeColor;
+            overlayImg.MaskIgnoreStroke = MaskIgnoreStroke;
+            overlayImg.DropShadowEnabled = false;
+
+            overlayImg.InnerShadowEnabled = true;
+            overlayImg.InnerShadowOffsetX = InnerShadowOffsetX;
+            overlayImg.InnerShadowOffsetY = InnerShadowOffsetY;
+            overlayImg.InnerShadowBlur = InnerShadowBlur;
+            overlayImg.InnerShadowSpread = InnerShadowSpread;
+            overlayImg.InnerShadowColor = InnerShadowColor;
+
+            if (TryGetComponent<CanvasGroup>(out var myCg))
+            {
+                CanvasGroup overlayCg = overlayGo.GetComponent<CanvasGroup>() ?? overlayGo.AddComponent<CanvasGroup>();
+                overlayCg.alpha = myCg.alpha;
+                overlayCg.interactable = false;
+                overlayCg.blocksRaycasts = false;
+                overlayCg.ignoreParentGroups = myCg.ignoreParentGroups;
             }
         }
 
@@ -643,7 +897,8 @@ namespace ProjectArea.UI
             {
                 if (overlayTr != null)
                 {
-                    DestroyHelper(overlayTr);
+                    if (Application.isPlaying) Destroy(overlayTr.gameObject);
+                    else DestroyImmediate(overlayTr.gameObject);
                 }
                 return;
             }
@@ -674,6 +929,7 @@ namespace ProjectArea.UI
             overlayImg.color = new Color(0, 0, 0, 0);
             overlayImg.CornerRadii = CornerRadii;
             overlayImg.StrokeEnabled = true;
+            overlayImg.StrokePosition = StrokePosition;
             overlayImg.StrokeWidth = StrokeWidth;
             overlayImg.StrokeColor = StrokeColor;
             overlayImg.DropShadowEnabled = false;
@@ -696,7 +952,8 @@ namespace ProjectArea.UI
             {
                 if (underlayTr != null)
                 {
-                    DestroyHelper(underlayTr);
+                    if (Application.isPlaying) Destroy(underlayTr.gameObject);
+                    else DestroyImmediate(underlayTr.gameObject);
                 }
                 return;
             }
@@ -735,7 +992,11 @@ namespace ProjectArea.UI
             underlayImg.maskable = false;
             underlayImg.raycastTarget = false;
             underlayImg.color = new Color(0, 0, 0, 0); // No fill
-            underlayImg.StrokeEnabled = false;
+            bool hasOutsideStroke = m_Stroke != null && m_Stroke.Enabled && m_Stroke.Position == FigmaStrokePosition.Outside;
+            underlayImg.StrokeEnabled = hasOutsideStroke;
+            underlayImg.StrokePosition = StrokePosition;
+            underlayImg.StrokeWidth = StrokeWidth;
+            underlayImg.StrokeColor = new Color(0, 0, 0, 0);
             underlayImg.CornerRadii = CornerRadii;
             underlayImg.DropShadowEnabled = true;
             underlayImg.DropShadowOffset = DropShadowOffset;
@@ -761,7 +1022,15 @@ namespace ProjectArea.UI
             Transform overlayTr = transform.Find("[FigmaImage_OutlineOverlay]");
             if (overlayTr != null)
             {
-                DestroyHelper(overlayTr);
+                if (Application.isPlaying) Destroy(overlayTr.gameObject);
+                else DestroyImmediate(overlayTr.gameObject);
+            }
+
+            Transform innerOverlayTr = transform.Find("[FigmaImage_InnerShadowOverlay]");
+            if (innerOverlayTr != null)
+            {
+                if (Application.isPlaying) Destroy(innerOverlayTr.gameObject);
+                else DestroyImmediate(innerOverlayTr.gameObject);
             }
 
             if (transform.parent != null)
@@ -770,26 +1039,9 @@ namespace ProjectArea.UI
                 Transform underlayTr = transform.parent.Find(underlayName);
                 if (underlayTr != null)
                 {
-                    DestroyHelper(underlayTr);
+                    if (Application.isPlaying) Destroy(underlayTr.gameObject);
+                    else DestroyImmediate(underlayTr.gameObject);
                 }
-            }
-        }
-
-        private static void DestroyHelper(Transform helper)
-        {
-            if (Application.isPlaying)
-            {
-                bool canDetach = helper.parent == null || helper.parent.gameObject.activeInHierarchy;
-                helper.gameObject.SetActive(false);
-                if (canDetach)
-                {
-                    helper.SetParent(null, false);
-                }
-                Destroy(helper.gameObject);
-            }
-            else
-            {
-                DestroyImmediate(helper.gameObject);
             }
         }
 
@@ -838,6 +1090,10 @@ namespace ProjectArea.UI
             {
                 m_DropShadow = new FigmaDropShadowSettings();
             }
+            if (m_InnerShadow == null)
+            {
+                m_InnerShadow = new FigmaInnerShadowSettings();
+            }
         }
 
         #endregion
@@ -876,7 +1132,9 @@ namespace ProjectArea.UI
             // Stroke parameters
             bool strokeOn = m_Stroke != null && m_Stroke.Enabled && m_Stroke.Width > 0f;
             float maxStroke = Mathf.Min(halfSize.x, halfSize.y);
-            float clampedStrokeWidth = strokeOn ? Mathf.Clamp(m_Stroke.Width, 0f, maxStroke) : 0f;
+            float clampedStrokeWidth = strokeOn
+                ? (m_Stroke.Position == FigmaStrokePosition.Inside ? Mathf.Clamp(m_Stroke.Width, 0f, maxStroke) : Mathf.Max(0f, m_Stroke.Width))
+                : 0f;
             Color strokeColor = (m_Stroke != null) ? m_Stroke.Color : Color.white;
 
             // Drop Shadow parameters
@@ -890,15 +1148,57 @@ namespace ProjectArea.UI
             float shadowOffsetY = (m_DropShadow != null) ? m_DropShadow.OffsetY : 0f; // Figma convention: +Y is down
             Color shadowColor = (m_DropShadow != null) ? m_DropShadow.Color : new Color(0f, 0f, 0f, 0.25f);
 
-            // Expand mesh geometry if Drop Shadow is active directly on this graphic and we have a standard quad
-            if (applyShadowDirectly && count == 4)
+            bool isOutsideStroke = strokeOn && m_Stroke.Position == FigmaStrokePosition.Outside;
+            float strokePad = isOutsideStroke ? clampedStrokeWidth : 0f;
+
+            if (gameObject.name.StartsWith("[FigmaImage_InnerShadowOverlay]"))
             {
-                float extent = (shadowBlur > 0f ? shadowBlur * 1.5f + 2f : 2f) + Mathf.Max(0f, shadowSpread);
-                float leftPad = extent + Mathf.Max(0f, -shadowOffsetX);
-                float rightPad = extent + Mathf.Max(0f, shadowOffsetX);
+                Color innerColor = m_InnerShadow != null ? m_InnerShadow.Color : Color.clear;
+                float pInnerRG = Mathf.Round(innerColor.r * 255f) * 256f + Mathf.Round(innerColor.g * 255f);
+                float pInnerBA = Mathf.Round(innerColor.b * 255f) * 256f + Mathf.Round(innerColor.a * 255f);
+                float offsetX = m_InnerShadow != null ? m_InnerShadow.OffsetX : 0f;
+                float offsetY = m_InnerShadow != null ? m_InnerShadow.OffsetY : 0f;
+                Vector4 innerPackedColors = new Vector4(pInnerRG, pInnerBA, offsetX, offsetY);
+
+                float innerBlur = m_InnerShadow != null ? Mathf.Max(0f, m_InnerShadow.Blur) : 0f;
+                float innerSpread = m_InnerShadow != null ? m_InnerShadow.Spread : 0f;
+                const float innerShadowLayerFlag = 10f;
+                Vector4 innerTangent = new Vector4(innerBlur, innerSpread, innerShadowLayerFlag, clampedStrokeWidth);
+
+                bool maskIgnore = m_Stroke != null && m_Stroke.IgnoreInMask;
+                Vector3 innerNormal = new Vector3(
+                    maskIgnore ? 1f : 0f,
+                    strokeOn ? 1f : 0f,
+                    isOutsideStroke ? 1f : 0f
+                );
+
+                UIVertex v = new UIVertex();
+                for (int i = 0; i < count; i++)
+                {
+                    toFill.PopulateUIVertex(ref v, i);
+                    Vector2 localPos = (Vector2)v.position - center;
+                    v.uv1 = new Vector4(localPos.x, localPos.y, halfSize.x, halfSize.y);
+                    v.uv2 = normalizedRadii;
+                    v.uv3 = innerPackedColors;
+                    v.tangent = innerTangent;
+                    v.normal = innerNormal;
+                    v.color = new Color32(255, 255, 255, 255);
+                    toFill.SetUIVertex(v, i);
+                }
+                return;
+            }
+
+            bool needsExpansion = (isOutsideStroke || applyShadowDirectly) && count == 4;
+
+            // Expand mesh geometry if Outside Stroke or Drop Shadow is active directly on this graphic and we have a standard quad
+            if (needsExpansion)
+            {
+                float shadowExtent = applyShadowDirectly ? ((shadowBlur > 0f ? shadowBlur * 1.5f + 2f : 2f) + Mathf.Max(0f, shadowSpread)) : 0f;
+                float leftPad = strokePad + (applyShadowDirectly ? shadowExtent + Mathf.Max(0f, -shadowOffsetX) : 0f);
+                float rightPad = strokePad + (applyShadowDirectly ? shadowExtent + Mathf.Max(0f, shadowOffsetX) : 0f);
                 // Figma +Y is down -> bottom padding expands with positive offsetY
-                float bottomPad = extent + Mathf.Max(0f, shadowOffsetY);
-                float topPad = extent + Mathf.Max(0f, -shadowOffsetY);
+                float bottomPad = strokePad + (applyShadowDirectly ? shadowExtent + Mathf.Max(0f, shadowOffsetY) : 0f);
+                float topPad = strokePad + (applyShadowDirectly ? shadowExtent + Mathf.Max(0f, -shadowOffsetY) : 0f);
 
                 UIVertex v0 = new UIVertex();
                 UIVertex v1 = new UIVertex();
@@ -960,11 +1260,20 @@ namespace ProjectArea.UI
 
             Vector4 packedColors = new Vector4(pStrokeRG, pStrokeBA, pShadowRG, pShadowBA);
 
-            // Tangent: x = strokeWidth (px), y = fillAlpha (0..1), z = strokeEnabled flag (0=off, 1=on, 2=on + ignore stroke in mask), w = shadowSpread (px)
+            // Tangent: x = strokeWidth (px), y = fillAlpha (0..1), z = strokeFlag (0=off, 1=inside, 2=inside+ignoreMask, 3=outside, 4=outside+ignoreMask), w = shadowSpread (px)
             float strokeFlag = 0f;
             if (strokeOn)
             {
-                strokeFlag = (m_Stroke != null && m_Stroke.IgnoreInMask) ? 2f : 1f;
+                bool ignoreInMask = m_Stroke != null && m_Stroke.IgnoreInMask;
+                switch (m_Stroke.Position)
+                {
+                    case FigmaStrokePosition.Inside:
+                        strokeFlag = ignoreInMask ? 2f : 1f;
+                        break;
+                    case FigmaStrokePosition.Outside:
+                        strokeFlag = ignoreInMask ? 4f : 3f;
+                        break;
+                }
             }
 
             Vector4 strokeAndShadowParams = new Vector4(
@@ -997,6 +1306,52 @@ namespace ProjectArea.UI
                 vert.color = new Color32(vert.color.r, vert.color.g, vert.color.b, 255);
 
                 toFill.SetUIVertex(vert, i);
+            }
+
+            bool innerShadowOn = m_InnerShadow != null && m_InnerShadow.Enabled && m_InnerShadow.Color.a > 0.0001f;
+            bool hasInnerShadowOverlay = transform.Find("[FigmaImage_InnerShadowOverlay]") != null;
+
+            if (innerShadowOn && !hasInnerShadowOverlay)
+            {
+                Color innerColor = m_InnerShadow.Color;
+                float pInnerRG = Mathf.Round(innerColor.r * 255f) * 256f + Mathf.Round(innerColor.g * 255f);
+                float pInnerBA = Mathf.Round(innerColor.b * 255f) * 256f + Mathf.Round(innerColor.a * 255f);
+                Vector4 innerPackedColors = new Vector4(pInnerRG, pInnerBA, m_InnerShadow.OffsetX, m_InnerShadow.OffsetY);
+
+                float innerBlur = Mathf.Max(0f, m_InnerShadow.Blur);
+                float innerSpread = m_InnerShadow.Spread;
+                const float innerShadowLayerFlag = 10f;
+                Vector4 innerTangent = new Vector4(innerBlur, innerSpread, innerShadowLayerFlag, clampedStrokeWidth);
+
+                bool maskIgnore = m_Stroke != null && m_Stroke.IgnoreInMask;
+                Vector3 innerNormal = new Vector3(
+                    maskIgnore ? 1f : 0f,
+                    strokeOn ? 1f : 0f,
+                    isOutsideStroke ? 1f : 0f
+                );
+
+                int baseVertCount = count;
+                int startIndex = toFill.currentVertCount;
+
+                UIVertex innerV = new UIVertex();
+                for (int i = 0; i < baseVertCount; i++)
+                {
+                    toFill.PopulateUIVertex(ref innerV, i);
+                    Vector2 localPos = (Vector2)innerV.position - center;
+                    innerV.uv1 = new Vector4(localPos.x, localPos.y, halfSize.x, halfSize.y);
+                    innerV.uv2 = normalizedRadii;
+                    innerV.uv3 = innerPackedColors;
+                    innerV.tangent = innerTangent;
+                    innerV.normal = innerNormal;
+                    innerV.color = new Color32(255, 255, 255, 255);
+                    toFill.AddVert(innerV);
+                }
+
+                if (baseVertCount == 4)
+                {
+                    toFill.AddTriangle(startIndex, startIndex + 1, startIndex + 2);
+                    toFill.AddTriangle(startIndex + 2, startIndex + 3, startIndex);
+                }
             }
         }
 
@@ -1035,7 +1390,11 @@ namespace ProjectArea.UI
             float dist = Mathf.Sqrt(Mathf.Max(q.x, 0f) * Mathf.Max(q.x, 0f) + Mathf.Max(q.y, 0f) * Mathf.Max(q.y, 0f))
                          + Mathf.Min(Mathf.Max(q.x, q.y), 0f) - rad;
 
-            return dist <= 0f;
+            float maxDist = (m_Stroke != null && m_Stroke.Enabled && m_Stroke.Position == FigmaStrokePosition.Outside)
+                ? m_Stroke.Width
+                : 0f;
+
+            return dist <= maxDist;
         }
 
         #endregion

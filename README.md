@@ -3,8 +3,9 @@
 `FigmaImage` it's just Unity's uGUI `Image` with Figma-style visual controls :)
 
 - Uniform or per-corner radius
-- Inside stroke with configurable width and color
+- Inside & Outside stroke with configurable width, color, and position alignment
 - Drop shadow with offset, blur, spread, and color
+- Inner shadow with offset, blur, spread, and color (including child element overlay)
 - Rounded raycast filtering
 - `Mask` and `RectMask2D` compatibility
 

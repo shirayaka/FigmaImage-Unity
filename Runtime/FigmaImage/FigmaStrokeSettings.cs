@@ -5,7 +5,8 @@ namespace ProjectArea.UI
 {
     public enum FigmaStrokePosition
     {
-        Inside = 0
+        Inside = 0,
+        Outside = 1
     }
 
     [Serializable]

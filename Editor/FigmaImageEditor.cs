@@ -29,6 +29,14 @@ namespace ProjectArea.UI.Editor
         private SerializedProperty m_ShadowSpread;
         private SerializedProperty m_ShadowColor;
 
+        private SerializedProperty m_InnerShadowProp;
+        private SerializedProperty m_InnerShadowEnabled;
+        private SerializedProperty m_InnerShadowOffsetX;
+        private SerializedProperty m_InnerShadowOffsetY;
+        private SerializedProperty m_InnerShadowBlur;
+        private SerializedProperty m_InnerShadowSpread;
+        private SerializedProperty m_InnerShadowColor;
+
         private SerializedProperty m_UseRoundedRaycast;
 
         private readonly GUIContent m_CornerRadiusHeader = new GUIContent("Corner Radius", "Figma-style corner radius controls in pixels.");
@@ -54,6 +62,14 @@ namespace ProjectArea.UI.Editor
         private readonly GUIContent m_ShadowBlurContent = new GUIContent("Blur", "Shadow blur radius in pixels.");
         private readonly GUIContent m_ShadowSpreadContent = new GUIContent("Spread", "Shadow spread distance in pixels.");
         private readonly GUIContent m_ShadowColorContent = new GUIContent("Color", "Shadow RGBA color.");
+
+        private readonly GUIContent m_InnerShadowHeader = new GUIContent("Inner Shadow", "Figma-style inner shadow controls.");
+        private readonly GUIContent m_InnerShadowEnabledContent = new GUIContent("Enabled", "Enable inner shadow rendering.");
+        private readonly GUIContent m_InnerShadowXContent = new GUIContent("X", "Horizontal offset in pixels. Positive moves right.");
+        private readonly GUIContent m_InnerShadowYContent = new GUIContent("Y", "Vertical offset in pixels. Positive moves down (Figma convention).");
+        private readonly GUIContent m_InnerShadowBlurContent = new GUIContent("Blur", "Inner shadow blur radius in pixels.");
+        private readonly GUIContent m_InnerShadowSpreadContent = new GUIContent("Spread", "Inner shadow spread distance in pixels. Positive pushes shadow inward.");
+        private readonly GUIContent m_InnerShadowColorContent = new GUIContent("Color", "Inner shadow RGBA color.");
 
         private readonly GUIContent m_RaycastContent = new GUIContent("Rounded Raycast", "Reject raycasts outside the rounded shape.");
 
@@ -88,6 +104,17 @@ namespace ProjectArea.UI.Editor
                 m_ShadowBlur = m_DropShadowProp.FindPropertyRelative("m_Blur");
                 m_ShadowSpread = m_DropShadowProp.FindPropertyRelative("m_Spread");
                 m_ShadowColor = m_DropShadowProp.FindPropertyRelative("m_Color");
+            }
+
+            m_InnerShadowProp = serializedObject.FindProperty("m_InnerShadow");
+            if (m_InnerShadowProp != null)
+            {
+                m_InnerShadowEnabled = m_InnerShadowProp.FindPropertyRelative("m_Enabled");
+                m_InnerShadowOffsetX = m_InnerShadowProp.FindPropertyRelative("m_OffsetX");
+                m_InnerShadowOffsetY = m_InnerShadowProp.FindPropertyRelative("m_OffsetY");
+                m_InnerShadowBlur = m_InnerShadowProp.FindPropertyRelative("m_Blur");
+                m_InnerShadowSpread = m_InnerShadowProp.FindPropertyRelative("m_Spread");
+                m_InnerShadowColor = m_InnerShadowProp.FindPropertyRelative("m_Color");
             }
 
             m_UseRoundedRaycast = serializedObject.FindProperty("m_UseRoundedRaycast");
@@ -168,10 +195,7 @@ namespace ProjectArea.UI.Editor
 
                     if (m_StrokePosition != null)
                     {
-                        using (new EditorGUI.DisabledScope(true))
-                        {
-                            EditorGUILayout.PropertyField(m_StrokePosition, m_StrokePositionContent);
-                        }
+                        EditorGUILayout.PropertyField(m_StrokePosition, m_StrokePositionContent);
                     }
 
                     if (m_StrokeIgnoreInMask != null)
@@ -224,6 +248,51 @@ namespace ProjectArea.UI.Editor
                     if (m_ShadowColor != null)
                     {
                         EditorGUILayout.PropertyField(m_ShadowColor, m_ShadowColorContent);
+                    }
+
+                    EditorGUI.indentLevel--;
+                }
+            }
+
+            EditorGUILayout.Space(4);
+            EditorGUILayout.LabelField(m_InnerShadowHeader, EditorStyles.miniBoldLabel);
+
+            if (m_InnerShadowEnabled != null)
+            {
+                EditorGUILayout.PropertyField(m_InnerShadowEnabled, m_InnerShadowEnabledContent);
+
+                if (m_InnerShadowEnabled.boolValue)
+                {
+                    EditorGUI.indentLevel++;
+
+                    if (m_InnerShadowOffsetX != null)
+                    {
+                        EditorGUILayout.PropertyField(m_InnerShadowOffsetX, m_InnerShadowXContent);
+                    }
+
+                    if (m_InnerShadowOffsetY != null)
+                    {
+                        EditorGUILayout.PropertyField(m_InnerShadowOffsetY, m_InnerShadowYContent);
+                    }
+
+                    if (m_InnerShadowBlur != null)
+                    {
+                        EditorGUI.BeginChangeCheck();
+                        float blur = EditorGUILayout.FloatField(m_InnerShadowBlurContent, m_InnerShadowBlur.floatValue);
+                        if (EditorGUI.EndChangeCheck())
+                        {
+                            m_InnerShadowBlur.floatValue = Mathf.Max(0f, blur);
+                        }
+                    }
+
+                    if (m_InnerShadowSpread != null)
+                    {
+                        EditorGUILayout.PropertyField(m_InnerShadowSpread, m_InnerShadowSpreadContent);
+                    }
+
+                    if (m_InnerShadowColor != null)
+                    {
+                        EditorGUILayout.PropertyField(m_InnerShadowColor, m_InnerShadowColorContent);
                     }
 
                     EditorGUI.indentLevel--;

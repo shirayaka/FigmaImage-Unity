@@ -211,6 +211,13 @@ MonoBehaviour:
     m_Blur: 8
     m_Spread: 0
     m_Color: {r: 0, g: 0, b: 0, a: 0.46666667}
+  m_InnerShadow:
+    m_Enabled: 0
+    m_OffsetX: 0
+    m_OffsetY: 2
+    m_Blur: 4
+    m_Spread: 0
+    m_Color: {r: 0, g: 0, b: 0, a: 0.25}
   m_UseRoundedRaycast: 0
   m_LinkCorners: 1
   m_Radius: -1
@@ -228,8 +235,6 @@ GameObject:
   - component: {fileID: 268267888}
   - component: {fileID: 268267890}
   - component: {fileID: 268267893}
-  - component: {fileID: 268267892}
-  - component: {fileID: 268267891}
   m_Layer: 0
   m_Name: RoundedImage_Standard
   m_TagString: Untagged
@@ -310,11 +315,11 @@ MonoBehaviour:
   m_PixelsPerUnitMultiplier: 1
   m_CornerRadius:
     m_LinkCorners: 1
-    m_Radius: 29.9
-    m_CornerRadii: {x: 29.9, y: 29.9, z: 29.9, w: 29.9}
+    m_Radius: 35.63
+    m_CornerRadii: {x: 35.63, y: 35.63, z: 35.63, w: 35.63}
   m_Stroke:
     m_Enabled: 1
-    m_Width: 5.03
+    m_Width: 4.71
     m_Color: {r: 0, g: 0, b: 0, a: 1}
     m_Position: 0
     m_IgnoreInMask: 1
@@ -325,123 +330,17 @@ MonoBehaviour:
     m_Blur: 8
     m_Spread: -3.75
     m_Color: {r: 0, g: 0, b: 0, a: 0.53333336}
+  m_InnerShadow:
+    m_Enabled: 1
+    m_OffsetX: 0
+    m_OffsetY: 0
+    m_Blur: 8.57
+    m_Spread: 13.91
+    m_Color: {r: 0, g: 0, b: 0, a: 0.6039216}
   m_UseRoundedRaycast: 1
   m_LinkCorners: 1
   m_Radius: -1
   m_CornerRadii: {x: 0, y: 0, z: 0, w: 0}
---- !u!114 &268267891
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 268267884}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 02d323187c25a8a458772357377ba1da, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  MyTransform: {fileID: 268267885}
-  Speed: 1
-  ScaleValue: 1.1
-  InitValue: 1
-  MyMode: 0
-  SelectEase: 0
-  OnCompleteScaling:
-    m_PersistentCalls:
-      m_Calls: []
-  OnCompleteScalingBack:
-    m_PersistentCalls:
-      m_Calls: []
-  SelectType: 0
-  Logo: {fileID: 0}
-  BoolDelayTime: 0
-  DelayedTime: 0
-  _audioSource: {fileID: 0}
-  _sourceButton: {fileID: 268267893}
-  _onHoverSound: {fileID: 0}
-  _onClickUpSound: {fileID: 0}
-  _onClickDownSound: {fileID: 0}
-  _onExitSound: {fileID: 0}
-  _onHoverImage: {fileID: 0}
-  _onClickImage: {fileID: 0}
-  _onIdleImage: {fileID: 0}
-  _onDisableImage: {fileID: 0}
-  _hoverColor: {r: 0.6698113, g: 0.6698113, b: 0.6698113, a: 1}
-  _clickColor: {r: 0.6792453, g: 0.6792453, b: 0.6792453, a: 1}
-  _idleColor: {r: 1, g: 1, b: 1, a: 1}
-  _disableColor: {r: 0.4811321, g: 0.4811321, b: 0.4811321, a: 1}
-  _hoverFontColor: {r: 0, g: 0, b: 0, a: 0}
-  _clickFontColor: {r: 0, g: 0, b: 0, a: 0}
-  _idleFontColor: {r: 0, g: 0, b: 0, a: 0}
-  _disableFontColor: {r: 0, g: 0, b: 0, a: 0}
-  _isFollowingCursorTooltip: 0
-  _gapWithCursor: {x: 0, y: 0}
-  _useTooltips: 0
-  _isToggle: 0
-  _activateToggleOnStart: 0
-  _reorderTooltipParent: 0
-  _reorderTooltipIteration: 0
-  _tooltipOriginalText: {fileID: 0}
-  _tooltipsPrefab: {fileID: 0}
-  _tooltipObject: {fileID: 0}
-  _delayTooltipWithoutTransition: 0
-  _tooltipsText: 
-  _tooltipActiveInactiveCanvasGroup: {fileID: 0}
-  _tooltipsPivot: 0
-  _tooltipsImagePivot: 0
-  _tooltipTransition: 0
-  _tooltipObjectMode: 0
-  PivotMode: 0
-  TargetImage: {fileID: 268267890}
-  ImageMode: 2
-  TooltipsType: 0
-  _tooltipAnchorPreset: 0
-  _canvas: {fileID: 0}
-  _toggle: {fileID: 0}
-  _onToggleActive:
-    m_PersistentCalls:
-      m_Calls: []
-  _onToggleInactive:
-    m_PersistentCalls:
-      m_Calls: []
-  _onToggleActiveHover:
-    m_PersistentCalls:
-      m_Calls: []
-  _onToggleActiveExit:
-    m_PersistentCalls:
-      m_Calls: []
-  _onToggleInactiveHover:
-    m_PersistentCalls:
-      m_Calls: []
-  _onToggleInactiveExit:
-    m_PersistentCalls:
-      m_Calls: []
-  TMPTexts: []
---- !u!114 &268267892
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 268267884}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9809f423130daca4e98017921e6fb4a9, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  OnPointerEnterEvent:
-    m_PersistentCalls:
-      m_Calls: []
-  OnPointerUpEvent:
-    m_PersistentCalls:
-      m_Calls: []
-  OnPointerExitEvent:
-    m_PersistentCalls:
-      m_Calls: []
-  OnPointerDownEvent:
-    m_PersistentCalls:
-      m_Calls: []
 --- !u!114 &268267893
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -623,6 +522,13 @@ MonoBehaviour:
     m_Blur: 8
     m_Spread: 0
     m_Color: {r: 0, g: 0, b: 0, a: 0.25}
+  m_InnerShadow:
+    m_Enabled: 0
+    m_OffsetX: 0
+    m_OffsetY: 2
+    m_Blur: 4
+    m_Spread: 0
+    m_Color: {r: 0, g: 0, b: 0, a: 0.25}
   m_UseRoundedRaycast: 0
   m_LinkCorners: 1
   m_Radius: -1
@@ -756,6 +662,13 @@ MonoBehaviour:
     m_Blur: 8
     m_Spread: 0
     m_Color: {r: 0, g: 0, b: 0, a: 0.25}
+  m_InnerShadow:
+    m_Enabled: 0
+    m_OffsetX: 0
+    m_OffsetY: 2
+    m_Blur: 4
+    m_Spread: 0
+    m_Color: {r: 0, g: 0, b: 0, a: 0.25}
   m_UseRoundedRaycast: 0
   m_LinkCorners: 1
   m_Radius: -1
@@ -867,6 +780,7 @@ RectTransform:
   - {fileID: 256604555}
   - {fileID: 270744725}
   - {fileID: 577264033}
+  - {fileID: 2071338933}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -996,6 +910,13 @@ MonoBehaviour:
     m_OffsetX: 0
     m_OffsetY: 4
     m_Blur: 8
+    m_Spread: 0
+    m_Color: {r: 0, g: 0, b: 0, a: 0.25}
+  m_InnerShadow:
+    m_Enabled: 0
+    m_OffsetX: 0
+    m_OffsetY: 2
+    m_Blur: 4
     m_Spread: 0
     m_Color: {r: 0, g: 0, b: 0, a: 0.25}
   m_UseRoundedRaycast: 0
@@ -1227,9 +1148,9 @@ MonoBehaviour:
     m_CornerRadii: {x: 24, y: 24, z: 24, w: 24}
   m_Stroke:
     m_Enabled: 1
-    m_Width: 1
+    m_Width: 3.07
     m_Color: {r: 0, g: 0, b: 0, a: 1}
-    m_Position: 0
+    m_Position: 1
     m_IgnoreInMask: 0
   m_DropShadow:
     m_Enabled: 0
@@ -1238,6 +1159,13 @@ MonoBehaviour:
     m_Blur: 8
     m_Spread: 0
     m_Color: {r: 0, g: 0, b: 0, a: 0.25}
+  m_InnerShadow:
+    m_Enabled: 1
+    m_OffsetX: 1.15
+    m_OffsetY: 3.26
+    m_Blur: 8.54
+    m_Spread: 4.7
+    m_Color: {r: 0, g: 0, b: 0, a: 0.7176471}
   m_UseRoundedRaycast: 0
   m_LinkCorners: 1
   m_Radius: -1
@@ -1280,10 +1208,10 @@ MonoBehaviour:
   _onClickImage: {fileID: 0}
   _onIdleImage: {fileID: 0}
   _onDisableImage: {fileID: 0}
-  _hoverColor: {r: 0.6981132, g: 0.6981132, b: 0.6981132, a: 1}
-  _clickColor: {r: 0.4716981, g: 0.4716981, b: 0.4716981, a: 1}
-  _idleColor: {r: 1, g: 1, b: 1, a: 1}
-  _disableColor: {r: 0.5566038, g: 0.5566038, b: 0.5566038, a: 1}
+  _hoverColor: {r: 0, g: 0, b: 0, a: 0}
+  _clickColor: {r: 0, g: 0, b: 0, a: 0}
+  _idleColor: {r: 0, g: 0, b: 0, a: 0}
+  _disableColor: {r: 0, g: 0, b: 0, a: 0}
   _hoverFontColor: {r: 0, g: 0, b: 0, a: 0}
   _clickFontColor: {r: 0, g: 0, b: 0, a: 0}
   _idleFontColor: {r: 0, g: 0, b: 0, a: 0}
@@ -1307,7 +1235,7 @@ MonoBehaviour:
   _tooltipObjectMode: 0
   PivotMode: 0
   TargetImage: {fileID: 1305622138}
-  ImageMode: 2
+  ImageMode: 0
   TooltipsType: 0
   _tooltipAnchorPreset: 0
   _canvas: {fileID: 0}
@@ -1437,6 +1365,13 @@ MonoBehaviour:
     m_OffsetX: 0
     m_OffsetY: 4
     m_Blur: 8
+    m_Spread: 0
+    m_Color: {r: 0, g: 0, b: 0, a: 0.25}
+  m_InnerShadow:
+    m_Enabled: 0
+    m_OffsetX: 0
+    m_OffsetY: 2
+    m_Blur: 4
     m_Spread: 0
     m_Color: {r: 0, g: 0, b: 0, a: 0.25}
   m_UseRoundedRaycast: 0
@@ -1656,6 +1591,13 @@ MonoBehaviour:
     m_Blur: 8
     m_Spread: 0
     m_Color: {r: 0, g: 0, b: 0, a: 0.25}
+  m_InnerShadow:
+    m_Enabled: 0
+    m_OffsetX: 0
+    m_OffsetY: 2
+    m_Blur: 4
+    m_Spread: 0
+    m_Color: {r: 0, g: 0, b: 0, a: 0.25}
   m_UseRoundedRaycast: 0
   m_LinkCorners: 1
   m_Radius: -1
@@ -1752,6 +1694,13 @@ MonoBehaviour:
     m_Blur: 8
     m_Spread: 0
     m_Color: {r: 0, g: 0, b: 0, a: 0.25}
+  m_InnerShadow:
+    m_Enabled: 0
+    m_OffsetX: 0
+    m_OffsetY: 2
+    m_Blur: 4
+    m_Spread: 0
+    m_Color: {r: 0, g: 0, b: 0, a: 0.25}
   m_UseRoundedRaycast: 0
   m_LinkCorners: 1
   m_Radius: -1
@@ -1798,8 +1747,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 51.6, y: -24.2}
-  m_SizeDelta: {x: 0, y: 0}
+  m_AnchoredPosition: {x: -26.9, y: -83.4}
+  m_SizeDelta: {x: 0, y: 97.979996}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1896671203
 MonoBehaviour:
@@ -2010,6 +1959,109 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &2071338932
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2071338933}
+  - component: {fileID: 2071338935}
+  - component: {fileID: 2071338934}
+  m_Layer: 5
+  m_Name: Figma Image
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &2071338933
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2071338932}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 484371221}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 422, y: 9}
+  m_SizeDelta: {x: 200, y: 80}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &2071338934
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2071338932}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a33e270bc8038f4f9e00e0fa35674c0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 0}
+  m_Type: 0
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+  m_CornerRadius:
+    m_LinkCorners: 1
+    m_Radius: 16
+    m_CornerRadii: {x: 16, y: 16, z: 16, w: 16}
+  m_Stroke:
+    m_Enabled: 1
+    m_Width: 3.9
+    m_Color: {r: 0, g: 0, b: 0, a: 1}
+    m_Position: 1
+    m_IgnoreInMask: 0
+  m_DropShadow:
+    m_Enabled: 1
+    m_OffsetX: 0
+    m_OffsetY: 4
+    m_Blur: 8
+    m_Spread: 0
+    m_Color: {r: 0, g: 0, b: 0, a: 0.25}
+  m_InnerShadow:
+    m_Enabled: 1
+    m_OffsetX: 0
+    m_OffsetY: 2
+    m_Blur: 12.4
+    m_Spread: 4.07
+    m_Color: {r: 0, g: 0, b: 0, a: 0.8509804}
+  m_UseRoundedRaycast: 0
+  m_LinkCorners: 1
+  m_Radius: -1
+  m_CornerRadii: {x: 0, y: 0, z: 0, w: 0}
+--- !u!222 &2071338935
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2071338932}
+  m_CullTransparentMesh: 1
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

@@ -128,6 +128,114 @@ Shader "UI/FigmaImage"
                 float shapeDist = 0.0;
                 float aa = 1.0;
 
+                // ── Inner Shadow Layer Branch ──
+                if (IN.strokeParams.z > 9.5)
+                {
+                    if (b.x > 0.0 && b.y > 0.0)
+                    {
+                        float rad = (p.x >= 0.0) ? ((p.y >= 0.0) ? r.y : r.z) : ((p.y >= 0.0) ? r.x : r.w);
+                        rad = min(rad, min(b.x, b.y));
+
+                        float2 q = abs(p) - b + rad;
+                        shapeDist = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - rad;
+
+                        aa = fwidth(shapeDist);
+                        aa = (aa > 0.0001) ? aa : 1.0;
+
+                        shapeMask = 1.0 - smoothstep(-aa * 0.5, aa * 0.5, shapeDist);
+                    }
+
+                    float inheritedAlpha = IN.color.a;
+
+                    float2 innerOffset = IN.packedColors.zw;
+                    float2 p_inner = p - float2(innerOffset.x, -innerOffset.y);
+
+                    float radInner = (p_inner.x >= 0.0)
+                        ? ((p_inner.y >= 0.0) ? r.y : r.z)
+                        : ((p_inner.y >= 0.0) ? r.x : r.w);
+                    radInner = min(radInner, min(b.x, b.y));
+
+                    float2 qInner = abs(p_inner) - b + radInner;
+                    float shiftedShapeDist = length(max(qInner, 0.0)) + min(max(qInner.x, qInner.y), 0.0) - radInner;
+
+                    float innerSpread = IN.strokeParams.y;
+                    float innerDist = shiftedShapeDist + innerSpread;
+
+                    float innerBlur = IN.strokeParams.x;
+                    float innerFactor = 0.0;
+                    if (innerBlur <= 0.0001)
+                    {
+                        innerFactor = smoothstep(-aa * 0.5, aa * 0.5, innerDist);
+                    }
+                    else
+                    {
+                        float blurRange = max(innerBlur, aa * 0.5);
+                        float t = clamp((innerDist + blurRange) / (2.0 * blurRange), 0.0, 1.0);
+                        innerFactor = t * t * (3.0 - 2.0 * t);
+                    }
+
+                    innerFactor *= shapeMask;
+
+                    float strokeWidth = IN.strokeParams.w;
+                    bool strokeEnabled = (IN.shadowParams.y > 0.5) && (strokeWidth > 0.001);
+                    bool isOutsideStroke = (IN.shadowParams.z > 0.5);
+                    if (strokeEnabled && !isOutsideStroke)
+                    {
+                        float innerEdgeDist = shapeDist + strokeWidth;
+                        float strokeFactor = smoothstep(-aa * 0.5, aa * 0.5, innerEdgeDist);
+                        innerFactor *= (1.0 - strokeFactor);
+                    }
+
+                    half4 innerColor = UnpackColor(IN.packedColors.x, IN.packedColors.y);
+                    innerColor.a *= inheritedAlpha;
+                    fixed4 finalColor = fixed4(innerColor.rgb, innerColor.a * innerFactor);
+
+                    bool isMaskGenerator = (_StencilOp > 0.5);
+                    if (isMaskGenerator)
+                    {
+                        bool maskIgnoreStroke = (IN.shadowParams.x > 0.5);
+                        if (maskIgnoreStroke && strokeEnabled)
+                        {
+                            float innerDistMask = isOutsideStroke ? shapeDist : (shapeDist + strokeWidth);
+                            float innerMask = 1.0 - smoothstep(-aa * 0.5, aa * 0.5, innerDistMask);
+                            clip(innerMask - 0.001);
+                        }
+                        else
+                        {
+                            clip(shapeMask - 0.001);
+                        }
+                    }
+                    else
+                    {
+                        clip(finalColor.a - 0.001);
+                    }
+
+                    #ifdef UNITY_UI_CLIP_RECT
+                    finalColor.a *= UnityGet2DClipping(IN.worldPosition.xy, _ClipRect);
+                    #endif
+
+                    #ifdef UNITY_UI_ALPHACLIP
+                    if (!isMaskGenerator)
+                    {
+                        clip(finalColor.a - 0.001);
+                    }
+                    #endif
+
+                    return finalColor;
+                }
+
+                // Decode stroke parameters
+                float strokeFlag = IN.strokeParams.z;
+                float rawStrokeWidth = IN.strokeParams.x;
+                bool strokeEnabled = (strokeFlag > 0.5) && (rawStrokeWidth > 0.001);
+                bool isOutsideStroke = (strokeFlag > 2.5);
+                bool maskIgnoreStroke = (abs(strokeFlag - 2.0) < 0.1 || abs(strokeFlag - 4.0) < 0.1);
+
+                // Inside stroke is clamped to halfSize; Outside stroke can expand outward
+                float strokeWidth = isOutsideStroke ? rawStrokeWidth : min(rawStrokeWidth, min(b.x, b.y));
+
+                float outerBound = (strokeEnabled && isOutsideStroke) ? strokeWidth : 0.0;
+
                 if (b.x > 0.0 && b.y > 0.0)
                 {
                     // Select radius based on quadrant:
@@ -148,7 +256,9 @@ Shader "UI/FigmaImage"
 
                     aa = fwidth(shapeDist);
                     aa = (aa > 0.0001) ? aa : 1.0;
-                    shapeMask = 1.0 - smoothstep(-aa * 0.5, aa * 0.5, shapeDist);
+
+                    float outerDist = shapeDist - outerBound;
+                    shapeMask = 1.0 - smoothstep(-aa * 0.5, aa * 0.5, outerDist);
                 }
 
                 // Inherited alpha from CanvasGroup / CanvasRenderer (passed through IN.color.a)
@@ -157,33 +267,56 @@ Shader "UI/FigmaImage"
                 // 1. Fill color calculation
                 // IN.strokeParams.y holds base Image fill alpha (0..1)
                 float fillAlpha = IN.strokeParams.y * inheritedAlpha;
+                float fillMask = 1.0 - smoothstep(-aa * 0.5, aa * 0.5, shapeDist);
                 half4 fillSample = tex2D(_MainTex, IN.texcoord) + _TextureSampleAdd;
-                half4 fillColor = half4(fillSample.rgb * IN.color.rgb, fillSample.a * fillAlpha);
+                half4 fillColor = half4(fillSample.rgb * IN.color.rgb, fillSample.a * fillAlpha * fillMask);
 
-                // 2. Inside stroke calculation
-                float strokeWidth = min(IN.strokeParams.x, min(b.x, b.y));
-                bool strokeEnabled = (IN.strokeParams.z > 0.5) && (strokeWidth > 0.001);
-
+                // 2. Stroke calculation
                 half4 shapeColor = fillColor;
 
                 if (strokeEnabled)
                 {
-                    // Inner edge of stroke is at shapeDist = -strokeWidth
-                    // Inside stroke region is shapeDist in [-strokeWidth, 0]
-                    float innerDist = shapeDist + strokeWidth;
-                    float strokeFactor = smoothstep(-aa * 0.5, aa * 0.5, innerDist);
-
                     half4 stroke = UnpackColor(IN.packedColors.x, IN.packedColors.y);
                     stroke.a *= inheritedAlpha;
 
-                    // Standard "Over" blend: Stroke layered over Fill
-                    float sa = stroke.a * strokeFactor;
-                    float outA = sa + fillColor.a * (1.0 - sa);
-                    float3 outRGB = (outA > 0.0001)
-                        ? (stroke.rgb * sa + fillColor.rgb * fillColor.a * (1.0 - sa)) / outA
-                        : stroke.rgb;
+                    if (isOutsideStroke)
+                    {
+                        // Outside stroke:
+                        // Exists between shapeDist = 0 and shapeDist = strokeWidth.
+                        // Inner edge: overlaps slightly with fill (smoothstep(-aa, 0.0, shapeDist)) for seamless composite
+                        // Outer edge: smoothly cuts off at strokeWidth
+                        float strokeInner = smoothstep(-aa, 0.0, shapeDist);
+                        float strokeOuter = 1.0 - smoothstep(strokeWidth - aa * 0.5, strokeWidth + aa * 0.5, shapeDist);
+                        float strokeFactor = strokeInner * strokeOuter;
 
-                    shapeColor = half4(outRGB, outA);
+                        float sa = stroke.a * strokeFactor;
+                        float fa = fillColor.a;
+
+                        // Fill composited OVER Outside Stroke
+                        float outA = fa + sa * (1.0 - fa);
+                        float3 outRGB = (outA > 0.0001)
+                            ? (fillColor.rgb * fa + stroke.rgb * sa * (1.0 - fa)) / outA
+                            : stroke.rgb;
+
+                        shapeColor = half4(outRGB, outA);
+                    }
+                    else
+                    {
+                        // Inside stroke:
+                        // Inner edge of stroke is at shapeDist = -strokeWidth
+                        // Inside stroke region is shapeDist in [-strokeWidth, 0]
+                        float innerDist = shapeDist + strokeWidth;
+                        float strokeFactor = smoothstep(-aa * 0.5, aa * 0.5, innerDist);
+
+                        // Standard "Over" blend: Stroke layered over Fill
+                        float sa = stroke.a * strokeFactor;
+                        float outA = sa + fillColor.a * (1.0 - sa);
+                        float3 outRGB = (outA > 0.0001)
+                            ? (stroke.rgb * sa + fillColor.rgb * fillColor.a * (1.0 - sa)) / outA
+                            : stroke.rgb;
+
+                        shapeColor = half4(outRGB, outA);
+                    }
                 }
 
                 // Outer shape alpha
@@ -211,6 +344,12 @@ Shader "UI/FigmaImage"
 
                     float2 q_shadow = abs(p_shadow) - b + rad_shadow;
                     float dist_shadow = length(max(q_shadow, 0.0)) + min(max(q_shadow.x, q_shadow.y), 0.0) - rad_shadow - shadowSpread;
+
+                    // When outside stroke is active, shadow casts from the outside contour of the stroke
+                    if (strokeEnabled && isOutsideStroke)
+                    {
+                        dist_shadow -= strokeWidth;
+                    }
 
                     float shadowFactor = 0.0;
                     if (shadowBlur <= 0.0001)
@@ -247,11 +386,10 @@ Shader "UI/FigmaImage"
 
                 if (isMaskGenerator)
                 {
-                    bool maskIgnoreStroke = (IN.strokeParams.z > 1.5) && strokeEnabled;
-                    if (maskIgnoreStroke)
+                    if (maskIgnoreStroke && strokeEnabled)
                     {
                         // Clip stencil strictly to the inside boundary of the stroke
-                        float innerDist = shapeDist + strokeWidth;
+                        float innerDist = isOutsideStroke ? shapeDist : (shapeDist + strokeWidth);
                         float innerMask = 1.0 - smoothstep(-aa * 0.5, aa * 0.5, innerDist);
                         clip(innerMask - 0.001);
                     }
