@@ -9,7 +9,7 @@ namespace ProjectArea.UI.Tests
         {
             string result = FigmaImageTests.RunAllTests();
 
-            Assert.That(result, Does.Contain("60/60 Tests Passed"), result);
+            Assert.That(result, Does.Contain("61/61 Tests Passed"), result);
         }
 
         [Test]

@@ -11,7 +11,7 @@ namespace ProjectArea.UI.Tests
         {
             var sb = new StringBuilder();
             int passed = 0;
-            int total = 60;
+            int total = 61;
 
             sb.AppendLine("=== Running FigmaImage Acceptance Tests (Corner Radius, Stroke, Drop Shadow & Inner Shadow) ===");
 
@@ -2110,6 +2110,74 @@ namespace ProjectArea.UI.Tests
                     else
                     {
                         sb.AppendLine($"[FAIL] Test 60: Auto outline failed: init={noOverlayInitially}, created={outlineCreated}, last={isLastSibling}, childBefore={childBeforeOutline}, tangentZ={v0.tangent.z}, cleaned={overlayCleanedUp}");
+                    }
+                }
+
+                // Test 61: LayoutGroup Compatibility with Mask and Drop Shadow Underlay
+                {
+                    var groupGo = new GameObject("Test61_LayoutParent", typeof(RectTransform), typeof(VerticalLayoutGroup));
+                    groupGo.transform.SetParent(testRoot.transform, false);
+
+                    var vlg = groupGo.GetComponent<VerticalLayoutGroup>();
+                    vlg.spacing = 10f;
+                    vlg.childControlWidth = true;
+                    vlg.childControlHeight = false;
+
+                    var b1 = new GameObject("Button1", typeof(RectTransform), typeof(CanvasRenderer), typeof(FigmaImage), typeof(Mask));
+                    b1.transform.SetParent(groupGo.transform, false);
+                    var b1Rt = (RectTransform)b1.transform;
+                    b1Rt.sizeDelta = new Vector2(200, 50);
+                    var f1 = b1.GetComponent<FigmaImage>();
+                    f1.SetDropShadowEnabled(true);
+                    f1.SetDropShadowBlur(10f);
+
+                    var b2 = new GameObject("Button2", typeof(RectTransform), typeof(CanvasRenderer), typeof(FigmaImage), typeof(Mask));
+                    b2.transform.SetParent(groupGo.transform, false);
+                    var b2Rt = (RectTransform)b2.transform;
+                    b2Rt.sizeDelta = new Vector2(200, 50);
+                    var f2 = b2.GetComponent<FigmaImage>();
+                    f2.SetDropShadowEnabled(true);
+                    f2.SetDropShadowBlur(10f);
+
+                    var mi = typeof(FigmaImage).GetMethod("ExecuteHelperUpdates", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                    mi?.Invoke(f1, null);
+                    mi?.Invoke(f2, null);
+
+                    LayoutRebuilder.ForceRebuildLayoutImmediate(groupGo.GetComponent<RectTransform>());
+                    mi?.Invoke(f1, null);
+                    mi?.Invoke(f2, null);
+
+                    Transform u1 = groupGo.transform.Find($"[FigmaImage_ShadowUnderlay_{f1.GetInstanceID()}]");
+                    Transform u2 = groupGo.transform.Find($"[FigmaImage_ShadowUnderlay_{f2.GetInstanceID()}]");
+
+                    bool underlaysExist = u1 != null && u2 != null;
+                    bool leIgnored = underlaysExist &&
+                                     u1.GetComponent<LayoutElement>() != null && u1.GetComponent<LayoutElement>().ignoreLayout &&
+                                     u2.GetComponent<LayoutElement>() != null && u2.GetComponent<LayoutElement>().ignoreLayout;
+                    bool ignorerInterface = underlaysExist &&
+                                            ((ILayoutIgnorer)u1.GetComponent<FigmaImage>()).ignoreLayout &&
+                                            ((ILayoutIgnorer)u2.GetComponent<FigmaImage>()).ignoreLayout;
+                    bool hideFlagsCorrect = underlaysExist &&
+                                            (u1.gameObject.hideFlags & HideFlags.HideInHierarchy) != 0 &&
+                                            (u2.gameObject.hideFlags & HideFlags.HideInHierarchy) != 0;
+
+                    float actualDiff = Mathf.Abs(b1Rt.anchoredPosition.y - b2Rt.anchoredPosition.y);
+                    bool layoutSpacingCorrect = Mathf.Approximately(actualDiff, 60f);
+
+                    var u1Rt = (RectTransform)u1;
+                    var u2Rt = (RectTransform)u2;
+                    bool posSynced = u1Rt != null && u2Rt != null &&
+                                     Mathf.Approximately(u1Rt.anchoredPosition.y, b1Rt.anchoredPosition.y) &&
+                                     Mathf.Approximately(u2Rt.anchoredPosition.y, b2Rt.anchoredPosition.y);
+
+                    if (underlaysExist && leIgnored && ignorerInterface && hideFlagsCorrect && layoutSpacingCorrect && posSynced)
+                    {
+                        sb.AppendLine("[PASS] Test 61: LayoutGroup Compatibility -> Masked FigmaImage with Drop Shadow underlay has ignoreLayout = true, HideInHierarchy, and does not displace LayoutGroup items");
+                        passed++;
+                    }
+                    else
+                    {
+                        sb.AppendLine($"[FAIL] Test 61: LayoutGroup compatibility failed: exists={underlaysExist}, leIgnored={leIgnored}, ignorerInterface={ignorerInterface}, hideFlags={hideFlagsCorrect}, spacing={layoutSpacingCorrect} (diff={actualDiff}), posSynced={posSynced}");
                     }
                 }
             }

@@ -2,6 +2,15 @@
 
 All notable changes to this package are documented in this file.
 
+## [1.1.2] - 2026-09-30
+
+### Fixed
+
+- **LayoutGroup Compatibility**: Added `ILayoutIgnorer` to `FigmaImage` and `LayoutElement { ignoreLayout = true }` to shadow underlays and overlays (`[FigmaImage_ShadowUnderlay]`, `[FigmaImage_OutlineOverlay]`, `[FigmaImage_InnerShadowOverlay]`), preventing them from taking up layout slots or displacing items in `VerticalLayoutGroup`, `HorizontalLayoutGroup`, and `GridLayoutGroup`.
+- **Hierarchy Cleanliness**: Applied `HideFlags.HideInHierarchy` to `[FigmaImage_ShadowUnderlay]` to prevent hierarchy clutter in parent containers while maintaining seamless RectTransform tracking and lifecycle cleanup.
+- **Parent Change Cleanup**: Automatically cleans up orphaned shadow underlays when a masked `FigmaImage` is reparented.
+- **Expanded Test Suite**: Added Test 61 covering LayoutGroup positioning, spacing verification, and `ignoreLayout` flags.
+
 ## [1.1.1] - 2026-09-30
 
 ### Fixed

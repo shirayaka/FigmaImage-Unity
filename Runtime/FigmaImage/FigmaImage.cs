@@ -7,7 +7,7 @@ namespace ProjectArea.UI
     [AddComponentMenu("UI/Figma Image", 11)]
     [SelectionBase]
     [DisallowMultipleComponent]
-    public class FigmaImage : Image, ICanvasRaycastFilter, ISerializationCallbackReceiver
+    public class FigmaImage : Image, ICanvasRaycastFilter, ISerializationCallbackReceiver, ILayoutIgnorer
     {
         [SerializeField]
         private FigmaCornerRadiusSettings m_CornerRadius = new FigmaCornerRadiusSettings();
@@ -595,6 +595,7 @@ namespace ProjectArea.UI
         protected override void OnEnable()
         {
             base.OnEnable();
+            m_LastParent = transform.parent;
             EnsureCanvasChannels();
             UpdateRaycastPadding();
             RequestHelperUpdates();
@@ -615,6 +616,7 @@ namespace ProjectArea.UI
         protected override void Start()
         {
             base.Start();
+            m_LastParent = transform.parent;
             EnsureCanvasChannels();
             RequestHelperUpdates();
         }
@@ -686,9 +688,23 @@ namespace ProjectArea.UI
             }
         }
 
+        [NonSerialized]
+        private Transform m_LastParent;
+
         protected override void OnTransformParentChanged()
         {
             base.OnTransformParentChanged();
+            if (m_LastParent != null && m_LastParent != transform.parent)
+            {
+                string underlayName = $"[FigmaImage_ShadowUnderlay_{GetInstanceID()}]";
+                Transform oldUnderlay = m_LastParent.Find(underlayName);
+                if (oldUnderlay != null)
+                {
+                    if (Application.isPlaying) Destroy(oldUnderlay.gameObject);
+                    else DestroyImmediate(oldUnderlay.gameObject);
+                }
+            }
+            m_LastParent = transform.parent;
             EnsureCanvasChannels();
             RequestHelperUpdates();
         }
@@ -890,7 +906,7 @@ namespace ProjectArea.UI
             GameObject overlayGo;
             if (overlayTr == null)
             {
-                overlayGo = new GameObject(overlayName, typeof(RectTransform), typeof(CanvasRenderer), typeof(FigmaImage));
+                overlayGo = new GameObject(overlayName, typeof(RectTransform), typeof(CanvasRenderer), typeof(FigmaImage), typeof(LayoutElement));
                 overlayGo.hideFlags = HideFlags.DontSave;
                 overlayGo.transform.SetParent(transform, false);
             }
@@ -898,6 +914,9 @@ namespace ProjectArea.UI
             {
                 overlayGo = overlayTr.gameObject;
             }
+
+            LayoutElement le = overlayGo.GetComponent<LayoutElement>() ?? overlayGo.AddComponent<LayoutElement>();
+            le.ignoreLayout = true;
 
             Transform outlineTr = transform.Find("[FigmaImage_OutlineOverlay]");
             int targetIdx = (outlineTr != null && outlineTr != overlayGo.transform) ? transform.childCount - 2 : transform.childCount - 1;
@@ -970,7 +989,7 @@ namespace ProjectArea.UI
             GameObject overlayGo;
             if (overlayTr == null)
             {
-                overlayGo = new GameObject(overlayName, typeof(RectTransform), typeof(CanvasRenderer), typeof(FigmaImage));
+                overlayGo = new GameObject(overlayName, typeof(RectTransform), typeof(CanvasRenderer), typeof(FigmaImage), typeof(LayoutElement));
                 overlayGo.hideFlags = HideFlags.DontSave;
                 overlayGo.transform.SetParent(transform, false);
             }
@@ -978,6 +997,9 @@ namespace ProjectArea.UI
             {
                 overlayGo = overlayTr.gameObject;
             }
+
+            LayoutElement le = overlayGo.GetComponent<LayoutElement>() ?? overlayGo.AddComponent<LayoutElement>();
+            le.ignoreLayout = true;
 
             if (overlayGo.transform.GetSiblingIndex() != transform.childCount - 1)
             {
@@ -1046,14 +1068,18 @@ namespace ProjectArea.UI
             GameObject underlayGo;
             if (underlayTr == null)
             {
-                underlayGo = new GameObject(underlayName, typeof(RectTransform), typeof(CanvasRenderer), typeof(FigmaImage));
-                underlayGo.hideFlags = HideFlags.DontSave;
+                underlayGo = new GameObject(underlayName, typeof(RectTransform), typeof(CanvasRenderer), typeof(FigmaImage), typeof(LayoutElement));
+                underlayGo.hideFlags = HideFlags.DontSave | HideFlags.HideInHierarchy;
                 underlayGo.transform.SetParent(transform.parent, false);
             }
             else
             {
                 underlayGo = underlayTr.gameObject;
+                underlayGo.hideFlags = HideFlags.DontSave | HideFlags.HideInHierarchy;
             }
+
+            LayoutElement underlayLe = underlayGo.GetComponent<LayoutElement>() ?? underlayGo.AddComponent<LayoutElement>();
+            underlayLe.ignoreLayout = true;
 
             // Ensure underlay is immediately before this GameObject in sibling order
             int myIndex = transform.GetSiblingIndex();
@@ -1070,6 +1096,8 @@ namespace ProjectArea.UI
             underlayRt.pivot = myRt.pivot;
             underlayRt.anchoredPosition = myRt.anchoredPosition;
             underlayRt.sizeDelta = myRt.sizeDelta;
+            underlayRt.offsetMin = myRt.offsetMin;
+            underlayRt.offsetMax = myRt.offsetMax;
             underlayRt.localRotation = myRt.localRotation;
             underlayRt.localScale = myRt.localScale;
 
@@ -1118,10 +1146,11 @@ namespace ProjectArea.UI
                 else DestroyImmediate(innerOverlayTr.gameObject);
             }
 
-            if (transform.parent != null)
+            Transform parentToSearch = transform.parent != null ? transform.parent : m_LastParent;
+            if (parentToSearch != null)
             {
                 string underlayName = $"[FigmaImage_ShadowUnderlay_{GetInstanceID()}]";
-                Transform underlayTr = transform.parent.Find(underlayName);
+                Transform underlayTr = parentToSearch.Find(underlayName);
                 if (underlayTr != null)
                 {
                     if (Application.isPlaying) Destroy(underlayTr.gameObject);
@@ -1481,6 +1510,12 @@ namespace ProjectArea.UI
 
             return dist <= maxDist;
         }
+
+        #endregion
+
+        #region ILayoutIgnorer
+
+        public bool ignoreLayout => gameObject != null && gameObject.name.StartsWith("[FigmaImage_");
 
         #endregion
     }
