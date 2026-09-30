@@ -1,6 +1,6 @@
 {
   "name": "com.shirayaka.figma-image",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "displayName": "Figma Image",
   "description": "A Unity UI Image component with Figma-style corner radii, inside and outside strokes, drop shadows, inner shadows, masking, and rounded raycasts.",
   "unity": "6000.0",

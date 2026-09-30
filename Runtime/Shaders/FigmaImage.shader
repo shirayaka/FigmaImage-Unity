@@ -93,10 +93,10 @@ Shader "UI/FigmaImage"
 
             half4 UnpackColor(float pRG, float pBA)
             {
-                half r = floor(pRG / 256.0) / 255.0;
-                half g = (pRG - floor(pRG / 256.0) * 256.0) / 255.0;
-                half b = floor(pBA / 256.0) / 255.0;
-                half a = (pBA - floor(pBA / 256.0) * 256.0) / 255.0;
+                half r = floor((pRG + 0.5) / 256.0) / 255.0;
+                half g = (pRG - floor((pRG + 0.5) / 256.0) * 256.0) / 255.0;
+                half b = floor((pBA + 0.5) / 256.0) / 255.0;
+                half a = (pBA - floor((pBA + 0.5) / 256.0) * 256.0) / 255.0;
                 return half4(r, g, b, a);
             }
 

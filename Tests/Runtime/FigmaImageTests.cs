@@ -11,7 +11,7 @@ namespace ProjectArea.UI.Tests
         {
             var sb = new StringBuilder();
             int passed = 0;
-            int total = 58;
+            int total = 60;
 
             sb.AppendLine("=== Running FigmaImage Acceptance Tests (Corner Radius, Stroke, Drop Shadow & Inner Shadow) ===");
 
@@ -2012,6 +2012,104 @@ namespace ProjectArea.UI.Tests
                     else
                     {
                         sb.AppendLine($"[FAIL] Test 58: Child overlay hierarchy failed: exists={overlayExists}, isLast={isLastSibling}, childBefore={childBeforeOverlay}");
+                    }
+                }
+
+                // Test 59: Outline Overlay Child Hierarchy (maintains top-most sibling when child Image added)
+                {
+                    var go = CreateImageObject("Test59_OutlineChildHierarchy", testRoot);
+                    var img = go.GetComponent<FigmaImage>();
+                    var mask = go.AddComponent<Mask>();
+                    img.SetStrokeEnabled(true);
+                    img.SetStrokeWidth(6f);
+                    img.SetMaskIgnoreStroke(true);
+
+                    // Add child image
+                    var childGo = new GameObject("Child_Content", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+                    childGo.transform.SetParent(go.transform, false);
+
+                    // Execute helper updates
+                    var mi = typeof(FigmaImage).GetMethod("ExecuteHelperUpdates", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                    mi?.Invoke(img, null);
+
+                    Transform outlineTr = go.transform.Find("[FigmaImage_OutlineOverlay]");
+                    bool outlineExists = outlineTr != null;
+                    bool isLastSibling = outlineExists && outlineTr.GetSiblingIndex() == go.transform.childCount - 1;
+                    bool childBeforeOutline = outlineExists && childGo.transform.GetSiblingIndex() < outlineTr.GetSiblingIndex();
+
+                    RectTransform overlayRt = outlineTr as RectTransform;
+                    bool rtSynced = overlayRt != null &&
+                        overlayRt.anchorMin == Vector2.zero &&
+                        overlayRt.anchorMax == Vector2.one &&
+                        overlayRt.pivot == img.rectTransform.pivot &&
+                        overlayRt.offsetMin == Vector2.zero &&
+                        overlayRt.offsetMax == Vector2.zero;
+
+                    var overlayImg = outlineTr != null ? outlineTr.GetComponent<FigmaImage>() : null;
+                    bool overlayImgValid = overlayImg != null && overlayImg.StrokeEnabled && !overlayImg.maskable;
+
+                    if (outlineExists && isLastSibling && childBeforeOutline && rtSynced && overlayImgValid)
+                    {
+                        sb.AppendLine("[PASS] Test 59: Outline Overlay Child Hierarchy -> [FigmaImage_OutlineOverlay] maintains top-most sibling with synced RectTransform and unmasked stroke above child image");
+                        passed++;
+                    }
+                    else
+                    {
+                        sb.AppendLine($"[FAIL] Test 59: Outline child hierarchy failed: exists={outlineExists}, isLast={isLastSibling}, childBefore={childBeforeOutline}, rtSynced={rtSynced}, overlayImgValid={overlayImgValid}");
+                    }
+                }
+
+                // Test 60: Auto Outline Overlay on Child Added when Masked
+                {
+                    var go = CreateImageObject("Test60_AutoOutlineOnChildAdded", testRoot);
+                    var img = go.GetComponent<FigmaImage>();
+                    var mask = go.AddComponent<Mask>();
+                    img.SetStrokeEnabled(true);
+                    img.SetStrokeWidth(4f);
+                    img.SetStrokeColor(Color.black);
+                    img.SetMaskIgnoreStroke(false);
+
+                    var mi = typeof(FigmaImage).GetMethod("ExecuteHelperUpdates", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                    mi?.Invoke(img, null);
+
+                    // Before child added: No outline overlay
+                    bool noOverlayInitially = go.transform.Find("[FigmaImage_OutlineOverlay]") == null;
+
+                    // Add child image
+                    var childGo = new GameObject("Child_Content", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+                    childGo.transform.SetParent(go.transform, false);
+
+                    // Trigger helper update
+                    mi?.Invoke(img, null);
+
+                    Transform outlineTr = go.transform.Find("[FigmaImage_OutlineOverlay]");
+                    bool outlineCreated = outlineTr != null;
+                    bool isLastSibling = outlineCreated && outlineTr.GetSiblingIndex() == go.transform.childCount - 1;
+                    bool childBeforeOutline = outlineCreated && childGo.transform.GetSiblingIndex() < outlineTr.GetSiblingIndex();
+
+                    // Check tangent.z streams 2f (inside + ignore mask) for base graphic when child exists
+                    VertexHelper vh = new VertexHelper();
+                    img.SendMessage("OnPopulateMesh", vh, SendMessageOptions.DontRequireReceiver);
+                    UIVertex v0 = new UIVertex();
+                    if (vh.currentVertCount > 0)
+                    {
+                        vh.PopulateUIVertex(ref v0, 0);
+                    }
+                    bool tangentStreamsIgnoreMask = Mathf.Approximately(v0.tangent.z, 2f);
+
+                    // Clean up child and verify overlay is removed
+                    UnityEngine.Object.DestroyImmediate(childGo);
+                    mi?.Invoke(img, null);
+                    bool overlayCleanedUp = go.transform.Find("[FigmaImage_OutlineOverlay]") == null;
+
+                    if (noOverlayInitially && outlineCreated && isLastSibling && childBeforeOutline && tangentStreamsIgnoreMask && overlayCleanedUp)
+                    {
+                        sb.AppendLine("[PASS] Test 60: Auto Outline Overlay -> Masked FigmaImage automatically creates [FigmaImage_OutlineOverlay] above child content even when MaskIgnoreStroke is false, and cleans up when child is removed");
+                        passed++;
+                    }
+                    else
+                    {
+                        sb.AppendLine($"[FAIL] Test 60: Auto outline failed: init={noOverlayInitially}, created={outlineCreated}, last={isLastSibling}, childBefore={childBeforeOutline}, tangentZ={v0.tangent.z}, cleaned={overlayCleanedUp}");
                     }
                 }
             }

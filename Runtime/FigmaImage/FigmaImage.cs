@@ -211,6 +211,7 @@ namespace ProjectArea.UI
                 {
                     m_Stroke.IgnoreInMask = value;
                     SetVerticesDirty();
+                    RequestHelperUpdates();
                 }
             }
         }
@@ -439,6 +440,7 @@ namespace ProjectArea.UI
             m_Stroke.Enabled = enabled;
             UpdateRaycastPadding();
             SetVerticesDirty();
+            RequestHelperUpdates();
         }
 
         public void SetStrokeWidth(float width)
@@ -470,6 +472,7 @@ namespace ProjectArea.UI
             {
                 m_Stroke.IgnoreInMask = ignore;
                 SetVerticesDirty();
+                RequestHelperUpdates();
             }
         }
 
@@ -623,7 +626,7 @@ namespace ProjectArea.UI
             bool isMasked = TryGetComponent<Mask>(out var mask) && mask.enabled;
             bool innerShadowActive = m_InnerShadow != null && m_InnerShadow.Enabled && m_InnerShadow.Color.a > 0.0001f;
             bool needHelpers = (isMasked && (
-                (m_Stroke != null && m_Stroke.Enabled && m_Stroke.IgnoreInMask) ||
+                (m_Stroke != null && m_Stroke.Enabled && (m_Stroke.IgnoreInMask || HasChildContent())) ||
                 (m_DropShadow != null && m_DropShadow.Enabled)
             )) || innerShadowActive;
 
@@ -639,7 +642,48 @@ namespace ProjectArea.UI
 
         protected virtual void OnTransformChildrenChanged()
         {
+            if (gameObject == null || gameObject.name.StartsWith("[FigmaImage_") || m_IsUpdatingHelpers) return;
+
+            EnsureHelperSiblingOrder();
             RequestHelperUpdates();
+        }
+
+        private void EnsureHelperSiblingOrder()
+        {
+            if (m_IsUpdatingHelpers) return;
+
+            Transform innerTr = transform.Find("[FigmaImage_InnerShadowOverlay]");
+            Transform outlineTr = transform.Find("[FigmaImage_OutlineOverlay]");
+
+            if (innerTr == null && outlineTr == null) return;
+
+            m_IsUpdatingHelpers = true;
+            try
+            {
+                int count = transform.childCount;
+                if (innerTr != null && outlineTr != null)
+                {
+                    if (innerTr.GetSiblingIndex() != count - 2 || outlineTr.GetSiblingIndex() != count - 1)
+                    {
+                        innerTr.SetAsLastSibling();
+                        outlineTr.SetAsLastSibling();
+                    }
+                }
+                else if (outlineTr != null)
+                {
+                    if (outlineTr.GetSiblingIndex() != count - 1)
+                        outlineTr.SetAsLastSibling();
+                }
+                else if (innerTr != null)
+                {
+                    if (innerTr.GetSiblingIndex() != count - 1)
+                        innerTr.SetAsLastSibling();
+                }
+            }
+            finally
+            {
+                m_IsUpdatingHelpers = false;
+            }
         }
 
         protected override void OnTransformParentChanged()
@@ -721,6 +765,7 @@ namespace ProjectArea.UI
 
             EnsureCanvasChannels();
             UpdateRaycastPadding();
+            RequestHelperUpdates();
             SetVerticesDirty();
         }
 #endif
@@ -777,6 +822,17 @@ namespace ProjectArea.UI
         #endregion
 
         #region Mask Helper Overlays & Underlays
+
+        public bool HasChildContent()
+        {
+            int count = transform.childCount;
+            for (int i = 0; i < count; i++)
+            {
+                Transform child = transform.GetChild(i);
+                if (!child.name.StartsWith("[FigmaImage_")) return true;
+            }
+            return false;
+        }
 
         private bool m_IsUpdatingHelpers = false;
 
@@ -843,15 +899,20 @@ namespace ProjectArea.UI
                 overlayGo = overlayTr.gameObject;
             }
 
-            if (overlayGo.transform.GetSiblingIndex() != transform.childCount - 1)
+            Transform outlineTr = transform.Find("[FigmaImage_OutlineOverlay]");
+            int targetIdx = (outlineTr != null && outlineTr != overlayGo.transform) ? transform.childCount - 2 : transform.childCount - 1;
+            if (targetIdx < 0) targetIdx = 0;
+            if (overlayGo.transform.GetSiblingIndex() != targetIdx)
             {
-                overlayGo.transform.SetAsLastSibling();
+                overlayGo.transform.SetSiblingIndex(targetIdx);
             }
 
             RectTransform rt = (RectTransform)overlayGo.transform;
             rt.anchorMin = Vector2.zero;
             rt.anchorMax = Vector2.one;
             rt.pivot = rectTransform.pivot;
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
             rt.anchoredPosition = Vector2.zero;
             rt.sizeDelta = Vector2.zero;
             rt.localRotation = Quaternion.identity;
@@ -876,6 +937,9 @@ namespace ProjectArea.UI
             overlayImg.InnerShadowSpread = InnerShadowSpread;
             overlayImg.InnerShadowColor = InnerShadowColor;
 
+            overlayImg.SetVerticesDirty();
+            overlayImg.SetMaterialDirty();
+
             if (TryGetComponent<CanvasGroup>(out var myCg))
             {
                 CanvasGroup overlayCg = overlayGo.GetComponent<CanvasGroup>() ?? overlayGo.AddComponent<CanvasGroup>();
@@ -888,7 +952,7 @@ namespace ProjectArea.UI
 
         private void UpdateOutlineOverlay(bool isMasked)
         {
-            bool needOutline = m_Stroke != null && m_Stroke.Enabled && m_Stroke.IgnoreInMask && isMasked;
+            bool needOutline = m_Stroke != null && m_Stroke.Enabled && isMasked && (m_Stroke.IgnoreInMask || HasChildContent());
 
             const string overlayName = "[FigmaImage_OutlineOverlay]";
             Transform overlayTr = transform.Find(overlayName);
@@ -915,13 +979,21 @@ namespace ProjectArea.UI
                 overlayGo = overlayTr.gameObject;
             }
 
-            overlayGo.transform.SetAsLastSibling();
+            if (overlayGo.transform.GetSiblingIndex() != transform.childCount - 1)
+            {
+                overlayGo.transform.SetAsLastSibling();
+            }
 
             RectTransform rt = (RectTransform)overlayGo.transform;
             rt.anchorMin = Vector2.zero;
             rt.anchorMax = Vector2.one;
+            rt.pivot = rectTransform.pivot;
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
             rt.anchoredPosition = Vector2.zero;
             rt.sizeDelta = Vector2.zero;
+            rt.localRotation = Quaternion.identity;
+            rt.localScale = Vector3.one;
 
             FigmaImage overlayImg = overlayGo.GetComponent<FigmaImage>();
             overlayImg.maskable = false;
@@ -933,6 +1005,19 @@ namespace ProjectArea.UI
             overlayImg.StrokeWidth = StrokeWidth;
             overlayImg.StrokeColor = StrokeColor;
             overlayImg.DropShadowEnabled = false;
+            overlayImg.InnerShadowEnabled = false;
+
+            overlayImg.SetVerticesDirty();
+            overlayImg.SetMaterialDirty();
+
+            if (TryGetComponent<CanvasGroup>(out var myCg))
+            {
+                CanvasGroup overlayCg = overlayGo.GetComponent<CanvasGroup>() ?? overlayGo.AddComponent<CanvasGroup>();
+                overlayCg.alpha = myCg.alpha;
+                overlayCg.interactable = false;
+                overlayCg.blocksRaycasts = false;
+                overlayCg.ignoreParentGroups = myCg.ignoreParentGroups;
+            }
         }
 
         private void UpdateShadowUnderlay(bool isMasked)
@@ -1165,7 +1250,7 @@ namespace ProjectArea.UI
                 const float innerShadowLayerFlag = 10f;
                 Vector4 innerTangent = new Vector4(innerBlur, innerSpread, innerShadowLayerFlag, clampedStrokeWidth);
 
-                bool maskIgnore = m_Stroke != null && m_Stroke.IgnoreInMask;
+                bool maskIgnore = m_Stroke != null && (m_Stroke.IgnoreInMask || (isMaskedGraphic && HasChildContent()));
                 Vector3 innerNormal = new Vector3(
                     maskIgnore ? 1f : 0f,
                     strokeOn ? 1f : 0f,
@@ -1264,7 +1349,7 @@ namespace ProjectArea.UI
             float strokeFlag = 0f;
             if (strokeOn)
             {
-                bool ignoreInMask = m_Stroke != null && m_Stroke.IgnoreInMask;
+                bool ignoreInMask = m_Stroke != null && (m_Stroke.IgnoreInMask || (isMaskedGraphic && HasChildContent()));
                 switch (m_Stroke.Position)
                 {
                     case FigmaStrokePosition.Inside:
@@ -1323,7 +1408,7 @@ namespace ProjectArea.UI
                 const float innerShadowLayerFlag = 10f;
                 Vector4 innerTangent = new Vector4(innerBlur, innerSpread, innerShadowLayerFlag, clampedStrokeWidth);
 
-                bool maskIgnore = m_Stroke != null && m_Stroke.IgnoreInMask;
+                bool maskIgnore = m_Stroke != null && (m_Stroke.IgnoreInMask || (isMaskedGraphic && HasChildContent()));
                 Vector3 innerNormal = new Vector3(
                     maskIgnore ? 1f : 0f,
                     strokeOn ? 1f : 0f,
