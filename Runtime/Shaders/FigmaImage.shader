@@ -49,7 +49,7 @@ Shader "UI/FigmaImage"
         CGPROGRAM
             #pragma vertex vert
             #pragma fragment frag
-            #pragma target 2.0
+            #pragma target 3.0
 
             #include "UnityCG.cginc"
             #include "UnityUI.cginc"
@@ -76,11 +76,11 @@ Shader "UI/FigmaImage"
                 fixed4 color         : COLOR;
                 float2 texcoord      : TEXCOORD0;
                 float4 worldPosition : TEXCOORD1;
-                float4 uiParams      : TEXCOORD3; // xy = localPos, zw = halfSize
-                float4 radii         : TEXCOORD4; // xyzw = TL, TR, BR, BL
-                float4 packedColors  : TEXCOORD5; // xy = stroke, zw = shadow
-                float4 strokeParams  : TEXCOORD6; // x = strokeWidth, y = fillAlpha, z = strokeEnabled, w = shadowSpread
-                float3 shadowParams  : TEXCOORD7; // x = shadowOffsetX, y = shadowOffsetY, z = shadowBlur
+                float4 uiParams      : TEXCOORD2; // xy = localPos, zw = halfSize
+                float4 radii         : TEXCOORD3; // xyzw = TL, TR, BR, BL
+                float4 packedColors  : TEXCOORD4; // xy = stroke, zw = shadow
+                float4 strokeParams  : TEXCOORD5; // x = strokeWidth, y = fillAlpha, z = strokeEnabled, w = shadowSpread
+                float3 shadowParams  : TEXCOORD6; // x = shadowOffsetX, y = shadowOffsetY, z = shadowBlur
                 UNITY_VERTEX_OUTPUT_STEREO
             };
 
@@ -93,11 +93,13 @@ Shader "UI/FigmaImage"
 
             half4 UnpackColor(float pRG, float pBA)
             {
-                half r = floor((pRG + 0.5) / 256.0) / 255.0;
-                half g = (pRG - floor((pRG + 0.5) / 256.0) * 256.0) / 255.0;
-                half b = floor((pBA + 0.5) / 256.0) / 255.0;
-                half a = (pBA - floor((pBA + 0.5) / 256.0) * 256.0) / 255.0;
-                return half4(r, g, b, a);
+                float rg = pRG + 0.5;
+                float r = floor(rg / 256.0);
+                float g = rg - r * 256.0;
+                float ba = pBA + 0.5;
+                float b = floor(ba / 256.0);
+                float a = ba - b * 256.0;
+                return saturate(half4(r, g, b, a) / 255.0);
             }
 
             v2f vert(appdata_t v)

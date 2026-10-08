@@ -11,7 +11,7 @@ namespace ProjectArea.UI.Tests
         {
             var sb = new StringBuilder();
             int passed = 0;
-            int total = 61;
+            int total = 65;
 
             sb.AppendLine("=== Running FigmaImage Acceptance Tests (Corner Radius, Stroke, Drop Shadow & Inner Shadow) ===");
 
@@ -2178,6 +2178,100 @@ namespace ProjectArea.UI.Tests
                     else
                     {
                         sb.AppendLine($"[FAIL] Test 61: LayoutGroup compatibility failed: exists={underlaysExist}, leIgnored={leIgnored}, ignorerInterface={ignorerInterface}, hideFlags={hideFlagsCorrect}, spacing={layoutSpacingCorrect} (diff={actualDiff}), posSynced={posSynced}");
+                    }
+                }
+
+                // Test 62: Resources Material Inclusion
+                {
+                    Material resMat = Resources.Load<Material>("FigmaImage-Default");
+                    bool validMat = resMat != null && resMat.shader != null && resMat.shader.name == "UI/FigmaImage";
+                    if (validMat)
+                    {
+                        sb.AppendLine("[PASS] Test 62: Resources Material Inclusion -> 'FigmaImage-Default.mat' successfully loaded with 'UI/FigmaImage' shader");
+                        passed++;
+                    }
+                    else
+                    {
+                        sb.AppendLine($"[FAIL] Test 62: 'FigmaImage-Default.mat' missing from Resources or has invalid shader (loaded: {resMat != null}, shader: {resMat?.shader?.name})");
+                    }
+                }
+
+                // Test 63: Runtime Default Material Resolution
+                {
+                    var go = CreateImageObject("Test63_DefaultMaterial", testRoot);
+                    var img = go.GetComponent<FigmaImage>();
+                    Material defMat = img.defaultMaterial;
+                    bool validDefMat = defMat != null && defMat.shader != null && defMat.shader.name == "UI/FigmaImage";
+                    if (validDefMat)
+                    {
+                        sb.AppendLine("[PASS] Test 63: Runtime Default Material Resolution -> FigmaImage.defaultMaterial resolves to 'UI/FigmaImage' without fallback to standard Image");
+                        passed++;
+                    }
+                    else
+                    {
+                        sb.AppendLine($"[FAIL] Test 63: defaultMaterial resolved incorrectly: {defMat?.name} (shader: {defMat?.shader?.name})");
+                    }
+                }
+
+                // Test 64: Nested Canvas Hierarchy Channel Propagation
+                {
+                    GameObject nestedRoot = new GameObject("Test64_RootCanvas", typeof(RectTransform), typeof(Canvas));
+                    GameObject nestedInter = new GameObject("Test64_InterCanvas", typeof(RectTransform), typeof(Canvas));
+                    GameObject nestedLeaf = new GameObject("Test64_LeafCanvas", typeof(RectTransform), typeof(Canvas));
+                    GameObject nestedImgGo = new GameObject("Test64_Img", typeof(RectTransform), typeof(CanvasRenderer), typeof(FigmaImage));
+
+                    nestedInter.transform.SetParent(nestedRoot.transform, false);
+                    nestedLeaf.transform.SetParent(nestedInter.transform, false);
+                    nestedImgGo.transform.SetParent(nestedLeaf.transform, false);
+
+                    Canvas cRoot = nestedRoot.GetComponent<Canvas>();
+                    Canvas cInter = nestedInter.GetComponent<Canvas>();
+                    Canvas cLeaf = nestedLeaf.GetComponent<Canvas>();
+                    var img = nestedImgGo.GetComponent<FigmaImage>();
+
+                    const AdditionalCanvasShaderChannels required =
+                        AdditionalCanvasShaderChannels.TexCoord1 |
+                        AdditionalCanvasShaderChannels.TexCoord2 |
+                        AdditionalCanvasShaderChannels.TexCoord3 |
+                        AdditionalCanvasShaderChannels.Normal |
+                        AdditionalCanvasShaderChannels.Tangent;
+
+                    // Trigger hierarchy changed
+                    img.SendMessage("EnsureCanvasChannels", SendMessageOptions.DontRequireReceiver);
+
+                    bool rootOk = (cRoot.additionalShaderChannels & required) == required;
+                    bool interOk = (cInter.additionalShaderChannels & required) == required;
+                    bool leafOk = (cLeaf.additionalShaderChannels & required) == required;
+
+                    if (rootOk && interOk && leafOk)
+                    {
+                        sb.AppendLine("[PASS] Test 64: Nested Canvas Hierarchy Channel Propagation -> Root, intermediate, and leaf Canvases all configured with required vertex channels");
+                        passed++;
+                    }
+                    else
+                    {
+                        sb.AppendLine($"[FAIL] Test 64: Nested canvas channels missing: root={rootOk}, inter={interOk}, leaf={leafOk}");
+                    }
+
+                    UnityEngine.Object.DestroyImmediate(nestedRoot);
+                }
+
+                // Test 65: Mobile Shader Compilation & Support
+                {
+                    Shader s = Shader.Find("UI/FigmaImage");
+                    bool shaderValid = s != null && s.isSupported;
+#if UNITY_EDITOR
+                    int msgCount = UnityEditor.ShaderUtil.GetShaderMessageCount(s);
+                    shaderValid = shaderValid && (msgCount == 0);
+#endif
+                    if (shaderValid)
+                    {
+                        sb.AppendLine("[PASS] Test 65: Mobile Shader Compilation & Support -> Shader 'UI/FigmaImage' is supported and compiles with 0 errors/warnings");
+                        passed++;
+                    }
+                    else
+                    {
+                        sb.AppendLine($"[FAIL] Test 65: Shader 'UI/FigmaImage' isSupported={s?.isSupported}");
                     }
                 }
             }

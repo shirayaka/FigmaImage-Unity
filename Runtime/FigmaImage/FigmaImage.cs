@@ -565,7 +565,11 @@ namespace ProjectArea.UI
             {
                 if (s_DefaultMaterial == null)
                 {
-                    Shader shader = Shader.Find("UI/FigmaImage");
+                    Material resourceMat = Resources.Load<Material>("FigmaImage-Default");
+                    Shader shader = (resourceMat != null && resourceMat.shader != null)
+                        ? resourceMat.shader
+                        : Shader.Find("UI/FigmaImage");
+
                     if (shader != null)
                     {
                         s_DefaultMaterial = new Material(shader)
@@ -579,7 +583,7 @@ namespace ProjectArea.UI
                         if (!s_ShaderNotFoundLogged)
                         {
                             s_ShaderNotFoundLogged = true;
-                            Debug.LogError("[FigmaImage] Could not find shader 'UI/FigmaImage'. Falling back to base Image defaultMaterial.");
+                            Debug.LogError("[FigmaImage] Could not find material 'FigmaImage-Default' in Resources or shader 'UI/FigmaImage'. Falling back to base Image defaultMaterial.");
                         }
                         return base.defaultMaterial;
                     }
@@ -802,13 +806,12 @@ namespace ProjectArea.UI
         private void EnsureCanvasChannels()
         {
             Canvas c = canvas;
-            if (c != null)
+            while (c != null)
             {
                 EnableChannelsOnCanvas(c);
-                if (c.rootCanvas != null && c.rootCanvas != c)
-                {
-                    EnableChannelsOnCanvas(c.rootCanvas);
-                }
+                if (c.isRootCanvas) break;
+                Transform parent = c.transform.parent;
+                c = parent != null ? parent.GetComponentInParent<Canvas>() : null;
             }
         }
 
@@ -903,8 +906,9 @@ namespace ProjectArea.UI
                 return;
             }
 
+            bool isNewOverlay = (overlayTr == null);
             GameObject overlayGo;
-            if (overlayTr == null)
+            if (isNewOverlay)
             {
                 overlayGo = new GameObject(overlayName, typeof(RectTransform), typeof(CanvasRenderer), typeof(FigmaImage), typeof(LayoutElement));
                 overlayGo.hideFlags = HideFlags.DontSave;
@@ -956,8 +960,11 @@ namespace ProjectArea.UI
             overlayImg.InnerShadowSpread = InnerShadowSpread;
             overlayImg.InnerShadowColor = InnerShadowColor;
 
-            overlayImg.SetVerticesDirty();
-            overlayImg.SetMaterialDirty();
+            if (isNewOverlay)
+            {
+                overlayImg.SetVerticesDirty();
+                overlayImg.SetMaterialDirty();
+            }
 
             if (TryGetComponent<CanvasGroup>(out var myCg))
             {
@@ -986,8 +993,9 @@ namespace ProjectArea.UI
                 return;
             }
 
+            bool isNewOutline = (overlayTr == null);
             GameObject overlayGo;
-            if (overlayTr == null)
+            if (isNewOutline)
             {
                 overlayGo = new GameObject(overlayName, typeof(RectTransform), typeof(CanvasRenderer), typeof(FigmaImage), typeof(LayoutElement));
                 overlayGo.hideFlags = HideFlags.DontSave;
@@ -1029,8 +1037,11 @@ namespace ProjectArea.UI
             overlayImg.DropShadowEnabled = false;
             overlayImg.InnerShadowEnabled = false;
 
-            overlayImg.SetVerticesDirty();
-            overlayImg.SetMaterialDirty();
+            if (isNewOutline)
+            {
+                overlayImg.SetVerticesDirty();
+                overlayImg.SetMaterialDirty();
+            }
 
             if (TryGetComponent<CanvasGroup>(out var myCg))
             {
@@ -1065,8 +1076,9 @@ namespace ProjectArea.UI
                 return;
             }
 
+            bool isNewUnderlay = (underlayTr == null);
             GameObject underlayGo;
-            if (underlayTr == null)
+            if (isNewUnderlay)
             {
                 underlayGo = new GameObject(underlayName, typeof(RectTransform), typeof(CanvasRenderer), typeof(FigmaImage), typeof(LayoutElement));
                 underlayGo.hideFlags = HideFlags.DontSave | HideFlags.HideInHierarchy;
@@ -1116,6 +1128,12 @@ namespace ProjectArea.UI
             underlayImg.DropShadowBlur = DropShadowBlur;
             underlayImg.DropShadowSpread = DropShadowSpread;
             underlayImg.DropShadowColor = DropShadowColor;
+
+            if (isNewUnderlay)
+            {
+                underlayImg.SetVerticesDirty();
+                underlayImg.SetMaterialDirty();
+            }
 
             // Sync CanvasGroup if present
             if (TryGetComponent<CanvasGroup>(out var myCg))
